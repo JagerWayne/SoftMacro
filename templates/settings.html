@@ -219,11 +219,57 @@
   </p>
 </section>
 
+<!-- ============================================================== BACKUP -->
+<section class="settings-section" id="backup">
+  <header class="settings-section-header">
+    <h2>Backup &amp; restore</h2>
+    <p>Download everything — apps, macros, groups, key assignments and
+       settings — as a single zip, or restore a previous backup.</p>
+  </header>
+
+  {% if restore.status == 'ok' %}
+  <div class="flash success">
+    Restored {{ restore.apps }} application{{ '' if restore.apps == 1 else 's' }}{% if restore.config %} and your settings{% endif %}.
+    {% if restore.port_changed %}
+    The web UI port changed to <strong>{{ restore.new_port }}</strong> — the
+    server is restarting;
+    <a href="http://127.0.0.1:{{ restore.new_port }}/settings#backup">open the new address</a>
+    if this page doesn't redirect.
+    {% endif %}
+  </div>
+  {% elif restore.status == 'error' %}
+  <div class="flash error">Restore failed: {{ restore.error }}</div>
+  {% endif %}
+
+  <div class="backup-actions">
+    <a class="btn" href="{{ url_for('download_backup') }}">Download backup (.zip)</a>
+    <form method="POST" action="{{ url_for('restore_backup_route') }}"
+          enctype="multipart/form-data" class="restore-form">
+      <input type="file" name="backup" accept=".zip,application/zip" required
+             aria-label="Backup zip file">
+      <button type="submit" class="btn">Restore from backup</button>
+    </form>
+  </div>
+  <p class="hint">
+    Restoring merges the archive into your data (apps with the same name are
+    replaced) and saves a safety copy of the current data to
+    <code>%APPDATA%\SoftMacro\backups</code> first. Hotkey, overlay and port
+    changes apply immediately.
+  </p>
+</section>
+
 <script src="{{ url_for('static', filename='key_reference.js') }}?v=1"></script>
 {% if port_changed %}
 <script>
   setTimeout(function () {
     window.location.href = "http://127.0.0.1:{{ port_changed }}/settings";
+  }, 2000);
+</script>
+{% endif %}
+{% if restore.status == 'ok' and restore.port_changed %}
+<script>
+  setTimeout(function () {
+    window.location.href = "http://127.0.0.1:{{ restore.new_port }}/settings#backup";
   }, 2000);
 </script>
 {% endif %}

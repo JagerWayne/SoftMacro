@@ -25,16 +25,27 @@ Endpoints:
 
 from __future__ import annotations
 
+import io
 import json
 import socket
 import threading
 from collections import deque
 from urllib.parse import urlsplit
 
-from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    abort,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    url_for,
+)
 from werkzeug.serving import make_server
 
 import autostart
+import backup
 import branding
 import config
 import event_parser
@@ -51,6 +62,9 @@ NUMPAD = storage.NUMPAD
 
 # Last update-check / install result, shown on the Settings page.
 _update_state: dict = {}
+
+# Last backup-restore result, shown on the Settings page.
+_restore_state: dict = {}
 
 # QWERTY layout for the slot grid -- mirrors overlay.py.
 QWERTY_ROWS = [
@@ -307,6 +321,8 @@ def _parse_web_port(form, current: int) -> tuple[int | None, str | None]:
 def create_app() -> Flask:
     app = Flask(__name__, template_folder="templates", static_folder="static")
     app.jinja_env.globals["app_title"] = branding.APP_TITLE
+    # Cap uploads (backup restores); larger requests get a 413.
+    app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 
     # ============================================================ security
     # The UI can inject keystrokes, so it must only ever be reachable from
@@ -525,13 +541,22 @@ def create_app() -> Flask:
                 {"targets": targets, "dir": dir_arg}, ensure_ascii=False
             ).replace("<", "\\u003c"),
             bound_total=bound_total,
+            error=request.args.get("error") or None,
         )
 
     @app.route("/app/<exe>/rename", methods=["POST"])
     def rename_app(exe):
-        new_name = (request.form.get("display_name") or "").strip()
-        storage.set_display_name(exe, new_name)
-        return redirect(url_for("view_app", exe=exe))
+        display_name = (request.form.get("display_name") or "").strip()
+        new_exe = (request.form.get("exe") or "").strip()
+        final_exe, error = storage.rename_app(exe, new_exe, display_name)
+        if error:
+            return redirect(url_for("view_app", exe=exe, error=error))
+        return redirect(url_for("view_app", exe=final_exe))
+
+    @app.route("/app/<exe>/delete", methods=["POST"])
+    def delete_app(exe):
+        storage.delete_app(exe)
+        return redirect(url_for("index"))
 
     # ========================================================== new macro
 
@@ -788,6 +813,7 @@ def create_app() -> Flask:
             port_changed=port_changed,
             web_port=config.get_web_port(),
             update=_update_state,
+            restore=_restore_state,
             app_version=branding.APP_VERSION,
             autostart_enabled=autostart.is_enabled(),
         )
@@ -833,6 +859,54 @@ def create_app() -> Flask:
     def restart_app():
         runtime.post(("restart_app", None))
         return render_template("restarting.html")
+
+    # ==================================================== backup / restore
+
+    @app.route("/settings/backup")
+    def download_backup():
+        blob = backup.create_backup()
+        return send_file(
+            io.BytesIO(blob),
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name=backup.backup_filename(),
+        )
+
+    @app.route("/settings/restore", methods=["POST"])
+    def restore_backup_route():
+        global _restore_state
+        upload = request.files.get("backup")
+        if upload is None or not upload.filename:
+            _restore_state = {
+                "status": "error",
+                "error": "Choose a backup .zip file first.",
+            }
+            return redirect(url_for("settings") + "#backup")
+
+        old_port = config.get_web_port()
+        result = backup.restore_backup(upload.read())
+        if not result.get("ok"):
+            _restore_state = {
+                "status": "error",
+                "error": result.get("error", "Restore failed."),
+            }
+            return redirect(url_for("settings") + "#backup")
+
+        # Apply the restored settings to the running app.
+        config.reload_hotkeys()
+        runtime.post(("apply_overlay_settings", config.get_overlay_config()))
+        new_port = config.get_web_port()
+        port_changed = new_port != old_port
+        if port_changed:
+            restart_in_thread(new_port)
+        _restore_state = {
+            "status": "ok",
+            "apps": result.get("apps", 0),
+            "config": result.get("config", False),
+            "port_changed": port_changed,
+            "new_port": new_port,
+        }
+        return redirect(url_for("settings") + "#backup")
 
     # ============================================================== parse
 

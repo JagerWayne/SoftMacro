@@ -65,6 +65,10 @@ and the macro plays there.
 - **Built-in help**: the <http://localhost:5000/help> page documents
   everything — overlay behaviour, every hotkey and key name, all Quick Add
   commands, groups, settings, backups and troubleshooting.
+- **Backup & restore**: download all apps, macros and settings as one zip
+  (or restore a previous backup) from the Settings page. Apps can also be
+  renamed (display name and `.exe`) or deleted, which removes their macros
+  with them.
 
 ## Install (step by step)
 
@@ -204,6 +208,7 @@ SoftMacro/
 ├── branding.py            # app name / version / author
 ├── runtime.py             # thread-safe event queue bridge to the tk loop
 ├── updater.py             # GitHub update check + safe installer
+├── backup.py              # zip backup / restore of apps + settings
 ├── autostart.py           # Windows autorun (HKCU Run key)
 ├── tray.py                # pystray system-tray icon + menu
 ├── window_info.py         # foreground window / exe / running apps via ctypes

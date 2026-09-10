@@ -36,6 +36,10 @@
   </div>
 </div>
 
+{% if error %}
+<div class="flash error">{{ error }}</div>
+{% endif %}
+
 <!------------------------------------------------------------ toolbar -->
 <div class="app-toolbar">
   <form method="POST" action="{{ url_for('rename_app', exe=app.exe) }}"
@@ -43,12 +47,22 @@
     <label for="display_name">Display name</label>
     <input type="text" name="display_name" id="display_name" class="input"
            value="{{ app.display_name }}" maxlength="64">
+    <label for="exe">Application (.exe)</label>
+    <input type="text" name="exe" id="exe" class="input app-exe-input"
+           value="{{ app.exe }}" maxlength="120" spellcheck="false">
     <button type="submit" class="btn small">Save</button>
   </form>
-  <div class="app-stats">
-    <span class="stat-chip">{{ app.macros|length }} macro{{ '' if app.macros|length == 1 else 's' }}</span>
-    <span class="stat-chip">{{ app.groups|length }} group{{ '' if app.groups|length == 1 else 's' }}</span>
-    <span class="stat-chip">{{ bound_total }} key{{ '' if bound_total == 1 else 's' }} bound</span>
+  <div class="app-toolbar-right">
+    <div class="app-stats">
+      <span class="stat-chip">{{ app.macros|length }} macro{{ '' if app.macros|length == 1 else 's' }}</span>
+      <span class="stat-chip">{{ app.groups|length }} group{{ '' if app.groups|length == 1 else 's' }}</span>
+      <span class="stat-chip">{{ bound_total }} key{{ '' if bound_total == 1 else 's' }} bound</span>
+    </div>
+    <form method="POST" action="{{ url_for('delete_app', exe=app.exe) }}"
+          class="app-delete"
+          onsubmit="return confirm('Delete this application and ALL of its macros, groups and key assignments? This cannot be undone.');">
+      <button type="submit" class="btn small danger">Delete application</button>
+    </form>
   </div>
 </div>
 

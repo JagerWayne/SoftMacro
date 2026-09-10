@@ -613,9 +613,10 @@ Release shift       release the held Shift</pre>
     </table>
   </div>
   <ul class="help-list">
-    <li><strong>Back up:</strong> copy the whole <code>%APPDATA%\SoftMacro</code> folder.</li>
-    <li><strong>Restore:</strong> copy it back while SoftMacro is closed.</li>
-    <li><strong>Delete an application:</strong> remove its <code>.json</code> file (SoftMacro must be restarted to notice).</li>
+    <li><strong>Back up:</strong> Settings → Backup &amp; restore → <em>Download backup</em> gives you a single zip with every app, macro, group, key assignment and your settings.</li>
+    <li><strong>Restore:</strong> pick a backup zip and click <em>Restore from backup</em>. Same-name apps are replaced, others are kept, and a safety copy of the current data is saved to <code>%APPDATA%\SoftMacro\backups</code> first.</li>
+    <li><strong>Rename an application:</strong> on the app page, edit the display name and/or the <code>.exe</code> — the storage file is renamed for you.</li>
+    <li><strong>Delete an application:</strong> use <em>Delete application</em> on the app page; it removes the app and all of its macros, groups and key assignments.</li>
     <li>Updates never touch these files.</li>
   </ul>
 </section>

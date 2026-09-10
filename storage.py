@@ -441,3 +441,59 @@ def set_display_name(exe: str, display_name: str) -> None:
     name = (display_name or "").strip()
     data["display_name"] = name or humanize(exe)
     save_app(data)
+
+
+def rename_app(
+    old_exe: str, new_exe: str, display_name: str | None = None
+) -> tuple[str | None, str | None]:
+    """Change the .exe filename an application is stored under.
+
+    Renames the JSON file, updates its ``exe`` field and (optionally) the
+    display name. Returns ``(final_exe, error)``; ``final_exe`` is ``None``
+    when the rename was refused (invalid name or target already exists).
+    """
+    old_exe = (old_exe or "").strip().lower()
+    new_exe = (new_exe or "").strip().lower()
+    if not new_exe:
+        return None, "Application .exe filename is required."
+    if "/" in new_exe or "\\" in new_exe or ":" in new_exe:
+        return None, "Just the filename, e.g. 'chrome.exe'."
+    if not new_exe.endswith(".exe"):
+        new_exe += ".exe"
+
+    if display_name is not None:
+        display_name = display_name.strip()
+
+    if new_exe == old_exe:
+        data = load_app(old_exe)
+        if display_name is not None:
+            data["display_name"] = display_name or humanize(old_exe)
+        save_app(data)
+        return new_exe, None
+
+    if _app_file(new_exe).exists():
+        return None, f"An application for '{new_exe}' already exists."
+
+    data = load_app(old_exe)
+    data["exe"] = new_exe
+    if display_name is not None:
+        data["display_name"] = display_name or humanize(new_exe)
+    save_app(data)
+    try:
+        _app_file(old_exe).unlink()
+    except OSError:
+        pass
+    return new_exe, None
+
+
+def delete_app(exe: str) -> bool:
+    """Delete an application and everything stored for it.
+
+    The whole JSON file goes, so all macros, groups and key assignments for
+    that executable are removed too.
+    """
+    try:
+        _app_file(exe).unlink()
+        return True
+    except OSError:
+        return False
