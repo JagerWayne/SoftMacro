@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}New application — {{ app_title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('index') }}" class="back">&larr; All applications</a>
+    <h1>New application</h1>
+    <p class="sub">
+      Pick one of the running apps below, or add one manually. The exe
+      filename is the primary identifier; the display name is a friendly
+      label for you.
+    </p>
+  </div>
+</div>
+
+{% if error %}
+<div class="flash error" style="margin-bottom: 18px;">{{ error }}</div>
+{% endif %}
+
+<div class="newapp-grid">
+
+  <!----------------------------------------- running applications -->
+  <section class="card newapp-running">
+    <header class="col-head">
+      <h2>Running applications</h2>
+      <div class="running-actions">
+        <span class="count-badge" id="runapp-count">{{ running|length }}</span>
+        <a href="{{ url_for('new_app') }}" class="btn small" id="runapp-refresh">↻ Refresh</a>
+      </div>
+    </header>
+    <p class="running-hint">
+      Apps with a visible window right now. Click one to add it — or open
+      it, if it's already in SoftMacro.
+    </p>
+
+    <div class="runapp-list" id="runapp-list">
+      {% for r in running %}
+      <form method="POST" action="{{ url_for('new_app') }}" class="runapp-form">
+        <input type="hidden" name="exe" value="{{ r.exe }}">
+        {% if not r.added %}
+        <input type="hidden" name="display_name" value="{{ r.name }}">
+        {% endif %}
+        <button type="submit" class="runapp" title="{{ r.title }}">
+          <span class="runapp-icon">{{ r.name[:1]|upper }}</span>
+          <span class="runapp-meta">
+            <span class="runapp-name">{{ r.name }}</span>
+            <span class="runapp-exe">{{ r.exe }}</span>
+          </span>
+          {% if r.added %}
+            <span class="runapp-badge">Added</span>
+          {% else %}
+            <span class="runapp-add">+ Add</span>
+          {% endif %}
+        </button>
+      </form>
+      {% endfor %}
+      <p class="runapp-empty" id="runapp-empty" {% if running %}hidden{% endif %}>
+        No visible applications found. Start the app you want to add, then
+        press Refresh.
+      </p>
+    </div>
+  </section>
+
+  <!----------------------------------------------- manual entry -->
+  <section class="card newapp-manual">
+    <h2>Add manually</h2>
+    <p class="running-hint">
+      For apps that aren't running yet, type the exe filename. We add
+      <code>.exe</code> if you forget it.
+    </p>
+
+    <form method="POST" class="form">
+      <div class="field">
+        <label for="exe">Application .exe</label>
+        <input type="text" name="exe" id="exe" class="input"
+               placeholder="chrome.exe"
+               value="{{ exe }}"
+               autocomplete="off"
+               required>
+        <span class="hint">
+          The lowercase file name of the app, as shown in Task Manager's
+          Details tab.
+        </span>
+      </div>
+
+      <div class="field">
+        <label for="display_name">Display name</label>
+        <input type="text" name="display_name" id="display_name" class="input"
+               placeholder="Chrome"
+               value="{{ display_name }}"
+               maxlength="64">
+        <span class="hint">
+          Optional. Defaults to a humanised version of the exe name
+          (e.g. <code>chrome.exe</code> &rarr; <em>Chrome</em>).
+        </span>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn primary large">Create application</button>
+        <a href="{{ url_for('index') }}" class="btn ghost">Cancel</a>
+      </div>
+    </form>
+  </section>
+</div>
+
+<template id="runapp-template">
+  <form method="POST" action="{{ url_for('new_app') }}" class="runapp-form">
+    <input type="hidden" name="exe">
+    <input type="hidden" name="display_name">
+    <button type="submit" class="runapp">
+      <span class="runapp-icon"></span>
+      <span class="runapp-meta">
+        <span class="runapp-name"></span>
+        <span class="runapp-exe"></span>
+      </span>
+      <span class="runapp-add"></span>
+    </button>
+  </form>
+</template>
+
+<script>
+(function () {
+  var refresh = document.getElementById('runapp-refresh');
+  var list = document.getElementById('runapp-list');
+  var count = document.getElementById('runapp-count');
+  var empty = document.getElementById('runapp-empty');
+  var template = document.getElementById('runapp-template');
+  if (!refresh || !list || !template) return;
+
+  function build(app) {
+    var form = template.content.firstElementChild.cloneNode(true);
+    form.querySelector('input[name="exe"]').value = app.exe;
+
+    var nameInput = form.querySelector('input[name="display_name"]');
+    if (app.added) {
+      nameInput.parentNode.removeChild(nameInput);
+    } else {
+      nameInput.value = app.name || app.exe;
+    }
+
+    var button = form.querySelector('.runapp');
+    button.title = app.title || '';
+    button.querySelector('.runapp-icon').textContent =
+      (app.name || app.exe).charAt(0).toUpperCase();
+    button.querySelector('.runapp-name').textContent = app.name || app.exe;
+    button.querySelector('.runapp-exe').textContent = app.exe;
+
+    var tag = button.querySelector('.runapp-add');
+    if (app.added) {
+      tag.className = 'runapp-badge';
+      tag.textContent = 'Added';
+    } else {
+      tag.textContent = '+ Add';
+    }
+    return form;
+  }
+
+  function render(apps) {
+    list.querySelectorAll('.runapp-form').forEach(function (f) { f.remove(); });
+    apps.forEach(function (app) { list.insertBefore(build(app), empty); });
+    count.textContent = apps.length;
+    empty.hidden = apps.length > 0;
+  }
+
+  refresh.addEventListener('click', function (event) {
+    event.preventDefault();
+    if (refresh.classList.contains('busy')) return;
+    refresh.classList.add('busy');
+    refresh.textContent = 'Refreshing…';
+    fetch('{{ url_for("running_apps_list") }}', { headers: { Accept: 'application/json' } })
+      .then(function (res) { return res.json(); })
+      .then(function (data) { render(data.apps || []); })
+      .catch(function () { /* keep the current list */ })
+      .finally(function () {
+        refresh.classList.remove('busy');
+        refresh.textContent = '↻ Refresh';
+      });
+  });
+})();
+</script>
+{% endblock %}

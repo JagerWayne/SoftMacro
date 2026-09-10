@@ -1,0 +1,709 @@
+{% extends "base.html" %}
+{% block title %}Help — {{ app_title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Help &amp; User Guide</h1>
+    <p class="sub">
+      Everything SoftMacro can do — from your first macro to every key
+      combination it understands. Version {{ app_version }}.
+    </p>
+  </div>
+</div>
+
+<nav class="help-toc card">
+  <a href="#what">What is SoftMacro?</a>
+  <a href="#start">Quick start</a>
+  <a href="#overlay">The overlay</a>
+  <a href="#hotkeys">Hotkeys</a>
+  <a href="#keys">All supported keys</a>
+  <a href="#combos">Combination examples</a>
+  <a href="#macros">Macros &amp; Quick Add</a>
+  <a href="#commands">Command reference</a>
+  <a href="#builder">Command builder</a>
+  <a href="#groups">Groups (nested)</a>
+  <a href="#settings">Settings</a>
+  <a href="#tray">Tray menu</a>
+  <a href="#data">Data &amp; backups</a>
+  <a href="#security">Security</a>
+  <a href="#troubleshooting">Troubleshooting</a>
+  <a href="#about">About</a>
+</nav>
+
+<!-- ==================================================================== WHAT -->
+<section class="help-section" id="what">
+  <h2>What is SoftMacro?</h2>
+  <p>
+    SoftMacro is a <strong>context-aware macro keyboard</strong> for Windows.
+    Press one global hotkey and an on-screen list of shortcuts appears for
+    whichever application is in front. Press a listed key (or click its row)
+    and SoftMacro hides itself, returns focus to that application and replays
+    the macro there. Different applications get different sets of macros.
+  </p>
+  <pre class="help-figure">+--------------------------------------+
+|  Google Chrome                       |
+|  ──────────────────────────────────  |
+|  Q  —  New tab                       |
+|  S  —  Save page                     |
+|  G  —  Tabs            (3 items)     |
++--------------------------------------+</pre>
+  <p>
+    Everything is managed in a local web UI — no account, no cloud, no
+    internet needed. Macros are stored per executable in
+    <code>%APPDATA%\SoftMacro\apps\&lt;exe&gt;.json</code>.
+  </p>
+</section>
+
+<!-- =================================================================== START -->
+<section class="help-section" id="start">
+  <h2>Quick start</h2>
+  <ol class="help-steps">
+    <li>
+      <strong>Open the web UI</strong> at
+      <code>http://localhost:{{ web_port }}</code> (the exact address is
+      printed when SoftMacro starts).
+    </li>
+    <li>
+      <strong>Add an application.</strong> On the Apps page click
+      <em>+ New app</em> and pick one of your running windows, or type the
+      executable name (for example <code>chrome.exe</code>) and a display
+      name.
+    </li>
+    <li>
+      <strong>Create a macro.</strong> Open the app and click
+      <em>+ New macro</em>. Give it a name and add events — either type a
+      command in <em>Quick Add</em> (for example <code>Ctrl+T</code>) or use
+      the <a href="#builder">Command builder</a>. Click <em>Create macro</em>.
+    </li>
+    <li>
+      <strong>Assign it to a key.</strong> On the app page, click a key on
+      the on-screen keyboard, choose the macro (or a group) from the popover.
+      The key lights up with the macro name.
+    </li>
+    <li>
+      <strong>Use it.</strong> Focus the application, press
+      <code>{{ hotkeys.show_overlay }}</code>, then press the assigned key.
+    </li>
+  </ol>
+</section>
+
+<!-- ================================================================= OVERLAY -->
+<section class="help-section" id="overlay">
+  <h2>The overlay (macro keyboard)</h2>
+  <p>
+    The overlay is a frameless, semi-transparent window that covers the
+    screen. It lists only the keys that are actually assigned for the
+    foreground application, in keyboard order (letters, then F-keys, then
+    numpad).
+  </p>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>What you do</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td>Press an assigned key</td><td>Plays that macro in the app you came from (or opens the group).</td></tr>
+        <tr><td>Click a row</td><td>Same as pressing its key.</td></tr>
+        <tr><td>Press <code>Esc</code></td><td>Steps back one group level; at the top level it closes the overlay.</td></tr>
+        <tr><td>Press the show hotkey again</td><td>Closes the overlay (toggle).</td></tr>
+        <tr><td>Do nothing</td><td>The overlay stays until you close it. It always sits on top.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="help-note">
+    While the overlay is open, <code>Esc</code> is captured globally, so it
+    always reaches SoftMacro — even if the window did not get keyboard focus.
+    Groups show their name in the subtitle, tinted with the group colour,
+    with the full trail (<code>Tabs › Advanced › Deep</code>) as you go
+    deeper.
+  </p>
+  <p>
+    If the overlay is empty, no macros are assigned to the application that
+    had focus when you pressed the hotkey. The title bar always shows which
+    app the overlay is for, so you can tell.
+  </p>
+</section>
+
+<!-- ================================================================= HOTKEYS -->
+<section class="help-section" id="hotkeys">
+  <h2>Hotkeys</h2>
+  <p>
+    These are global — they work whatever application is focused. Your
+    current settings are shown below; change them any time on the
+    <a href="{{ url_for('settings') }}">Settings</a> page.
+  </p>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Action</th><th>Default</th><th>Your setting</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Show / hide the macro keyboard</td>
+          <td><code>ctrl+z</code></td>
+          <td><code>{{ hotkeys.show_overlay }}</code></td>
+          <td>Toggles the overlay for the foreground app.</td>
+        </tr>
+        <tr>
+          <td>Stop a playing macro</td>
+          <td><code>pause</code></td>
+          <td><code>{{ hotkeys.stop_playback }}</code></td>
+          <td>Cancels the macro that is currently running.</td>
+        </tr>
+        <tr>
+          <td>Back / close (overlay only)</td>
+          <td><code>esc</code></td>
+          <td><code>esc</code> (fixed)</td>
+          <td>Only active while the overlay is visible.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>How to change a hotkey</h3>
+  <ol class="help-steps">
+    <li>Open <a href="{{ url_for('settings') }}">Settings</a>.</li>
+    <li>
+      Type the combination in the field (or click the key chips — click a
+      hotkey field first, then click keys to build the combo; <em>Clear</em>
+      empties it).
+    </li>
+    <li>Click <em>Save all settings</em>. It applies immediately — no restart.</li>
+  </ol>
+  <p>
+    A combination is written as <code>modifier+modifier+key</code>:
+  </p>
+  <ul class="help-list">
+    <li>Modifiers come from: <code>ctrl</code>, <code>alt</code>, <code>shift</code>, <code>win</code>.</li>
+    <li>Modifiers may be in any order: <code>ctrl+shift+r</code> = <code>shift+ctrl+r</code>.</li>
+    <li>It is case-insensitive: <code>CTRL+Z</code> = <code>ctrl+z</code>.</li>
+    <li>There must be exactly one non-modifier key: <code>ctrl+shift</code> alone is invalid.</li>
+    <li>Multi-word keys use spaces: <code>ctrl+page down</code>, <code>alt+print screen</code>.</li>
+    <li>Unknown names are rejected when you save (for example <code>ctrl+foo</code>).</li>
+  </ul>
+  <p class="help-note">
+    Windows reserves some combinations: <code>Ctrl+Alt+Delete</code> is
+    handled by the operating system before any application can see it, and
+    combinations like <code>Ctrl+Shift+Esc</code> may also trigger their
+    built-in Windows action. Prefer combinations that are not used by
+    Windows or by the target application.
+  </p>
+</section>
+
+<!-- ==================================================================== KEYS -->
+<section class="help-section" id="keys">
+  <h2>All supported keys</h2>
+  <p>
+    Every key name below can be used on its own (for a single-key hotkey) or
+    as the final key of a combination. Names are case-insensitive and
+    spaces around <code>+</code> are ignored.
+  </p>
+
+  <h3>Modifiers</h3>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Name</th><th>Aliases</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>ctrl</code></td><td><code>control</code></td><td>Left Ctrl.</td></tr>
+        <tr><td><code>left ctrl</code></td><td>—</td><td>Left Ctrl specifically.</td></tr>
+        <tr><td><code>right ctrl</code></td><td>—</td><td>Right Ctrl specifically.</td></tr>
+        <tr><td><code>alt</code></td><td>—</td><td>Left Alt.</td></tr>
+        <tr><td><code>left alt</code></td><td>—</td><td>Left Alt specifically.</td></tr>
+        <tr><td><code>right alt</code></td><td><code>altgr</code>, <code>alt gr</code></td><td>AltGr on many keyboard layouts.</td></tr>
+        <tr><td><code>shift</code></td><td>—</td><td>Left Shift.</td></tr>
+        <tr><td><code>left shift</code></td><td>—</td><td>Left Shift specifically.</td></tr>
+        <tr><td><code>right shift</code></td><td>—</td><td>Right Shift specifically.</td></tr>
+        <tr><td><code>win</code></td><td><code>windows</code>, <code>cmd</code></td><td>Left Windows key. (<code>meta</code> works in macros, not in hotkeys.)</td></tr>
+        <tr><td><code>left win</code></td><td>—</td><td>Left Windows key specifically.</td></tr>
+        <tr><td><code>right win</code></td><td>—</td><td>Right Windows key specifically.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Letters, digits and function keys</h3>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Group</th><th>Keys</th></tr></thead>
+      <tbody>
+        <tr><td>Letters</td><td><code>a</code> … <code>z</code></td></tr>
+        <tr><td>Digits (top row)</td><td><code>0</code> … <code>9</code></td></tr>
+        <tr><td>Function keys</td><td><code>f1</code> … <code>f24</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Numpad</h3>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Name</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>num 0</code> … <code>num 9</code></td><td>Number pad digits 0–9.</td></tr>
+        <tr><td><code>num enter</code></td><td>Numpad Enter.</td></tr>
+        <tr><td><code>num add</code></td><td>Numpad <code>+</code>.</td></tr>
+        <tr><td><code>num minus</code></td><td>Numpad <code>-</code>.</td></tr>
+        <tr><td><code>num multiply</code></td><td>Numpad <code>*</code>.</td></tr>
+        <tr><td><code>num divide</code></td><td>Numpad <code>/</code>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Editing, navigation and system keys</h3>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Name</th><th>Aliases</th><th>Name</th><th>Aliases</th></tr></thead>
+      <tbody>
+        <tr><td><code>esc</code></td><td><code>escape</code></td><td><code>home</code></td><td>—</td></tr>
+        <tr><td><code>tab</code></td><td>—</td><td><code>end</code></td><td>—</td></tr>
+        <tr><td><code>space</code></td><td><code>spacebar</code>, <code>space bar</code></td><td><code>page up</code></td><td><code>pgup</code></td></tr>
+        <tr><td><code>enter</code></td><td><code>return</code></td><td><code>page down</code></td><td><code>pgdown</code></td></tr>
+        <tr><td><code>backspace</code></td><td>—</td><td><code>up</code></td><td>—</td></tr>
+        <tr><td><code>delete</code></td><td><code>del</code></td><td><code>down</code></td><td>—</td></tr>
+        <tr><td><code>insert</code></td><td><code>ins</code></td><td><code>left</code></td><td>—</td></tr>
+        <tr><td><code>caps lock</code></td><td><code>capslock</code></td><td><code>right</code></td><td>—</td></tr>
+        <tr><td><code>num lock</code></td><td><code>numlock</code></td><td><code>print screen</code></td><td><code>prtscn</code></td></tr>
+        <tr><td><code>scroll lock</code></td><td><code>scrolllock</code></td><td><code>pause</code></td><td><code>break</code></td></tr>
+        <tr><td><code>menu</code></td><td><code>apps</code>, <code>application</code></td><td><code>play/pause</code></td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- =================================================================== COMBOS -->
+<section class="help-section" id="combos">
+  <h2>Combination examples</h2>
+  <p>
+    Any key from the list above can be combined with any subset of the
+    modifiers. Below are ready-made examples — click a chip on the
+    <a href="{{ url_for('settings') }}">Settings</a> page to try one.
+  </p>
+
+  <h3>Common combinations</h3>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Combination</th><th>Typical use</th></tr></thead>
+      <tbody>
+        <tr><td><code>ctrl+c</code> / <code>ctrl+v</code> / <code>ctrl+x</code></td><td>Copy / paste / cut.</td></tr>
+        <tr><td><code>ctrl+z</code> / <code>ctrl+y</code></td><td>Undo / redo.</td></tr>
+        <tr><td><code>ctrl+a</code> / <code>ctrl+s</code></td><td>Select all / save.</td></tr>
+        <tr><td><code>ctrl+f</code> / <code>ctrl+h</code></td><td>Find / replace.</td></tr>
+        <tr><td><code>ctrl+t</code> / <code>ctrl+w</code> / <code>ctrl+n</code></td><td>New tab / close tab / new window.</td></tr>
+        <tr><td><code>ctrl+shift+t</code></td><td>Reopen the last closed tab.</td></tr>
+        <tr><td><code>ctrl+shift+r</code></td><td>Hard reload.</td></tr>
+        <tr><td><code>ctrl+shift+esc</code></td><td>Task Manager (may be handled by Windows first).</td></tr>
+        <tr><td><code>alt+f4</code></td><td>Close the active window.</td></tr>
+        <tr><td><code>alt+tab</code></td><td>Switch windows (Windows handles it).</td></tr>
+        <tr><td><code>win+d</code> / <code>win+e</code></td><td>Show desktop / File Explorer.</td></tr>
+        <tr><td><code>win+r</code> / <code>win+l</code></td><td>Run dialog / lock PC (Windows handles it).</td></tr>
+        <tr><td><code>ctrl+space</code></td><td>Input method / non-breaking space.</td></tr>
+        <tr><td><code>f5</code> / <code>f12</code></td><td>Refresh / developer tools.</td></tr>
+        <tr><td><code>pause</code></td><td>The default stop-playback hotkey.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Every modifier with every letter</h3>
+  <p>These are all valid; any of them can be a hotkey:</p>
+  <div class="help-code-grid">
+    <div>
+      <strong><code>ctrl+</code></strong>
+      <p><code>{% for c in 'abcdefghijklmnopqrstuvwxyz' %}ctrl+{{ c }}{% if not loop.last %} · {% endif %}{% endfor %}</code></p>
+    </div>
+    <div>
+      <strong><code>alt+</code></strong>
+      <p><code>{% for c in 'abcdefghijklmnopqrstuvwxyz' %}alt+{{ c }}{% if not loop.last %} · {% endif %}{% endfor %}</code></p>
+    </div>
+    <div>
+      <strong><code>shift+</code></strong>
+      <p><code>{% for c in 'abcdefghijklmnopqrstuvwxyz' %}shift+{{ c }}{% if not loop.last %} · {% endif %}{% endfor %}</code></p>
+    </div>
+    <div>
+      <strong><code>win+</code></strong>
+      <p><code>{% for c in 'abcdefghijklmnopqrstuvwxyz' %}win+{{ c }}{% if not loop.last %} · {% endif %}{% endfor %}</code></p>
+    </div>
+    <div>
+      <strong><code>ctrl+shift+</code></strong>
+      <p><code>{% for c in 'abcdefghijklmnopqrstuvwxyz' %}ctrl+shift+{{ c }}{% if not loop.last %} · {% endif %}{% endfor %}</code></p>
+    </div>
+    <div>
+      <strong><code>ctrl+alt+</code></strong>
+      <p><code>{% for c in 'abcdefghijklmnopqrstuvwxyz' %}ctrl+alt+{{ c }}{% if not loop.last %} · {% endif %}{% endfor %}</code></p>
+    </div>
+    <div>
+      <strong>Function keys, alone</strong>
+      <p><code>{% for n in range(1, 25) %}f{{ n }}{% if not loop.last %} · {% endif %}{% endfor %}</code></p>
+    </div>
+    <div>
+      <strong>Function keys with modifiers</strong>
+      <p><code>ctrl+f1 · shift+f5 · alt+f4 · ctrl+shift+f12 · win+f1</code> — any modifier set works with any F-key.</p>
+    </div>
+    <div>
+      <strong>Numpad</strong>
+      <p><code>num 0 · num 5 · num enter · num add · num minus · num multiply · num divide</code>, optionally with modifiers (<code>ctrl+num 0</code>).</p>
+    </div>
+    <div>
+      <strong>Special keys</strong>
+      <p><code>esc · tab · space · enter · backspace · delete · insert · home · end · page up · page down · up · down · left · right · print screen · pause · menu</code>, optionally with modifiers.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================== MACROS -->
+<section class="help-section" id="macros">
+  <h2>Macros &amp; Quick Add</h2>
+  <p>
+    A macro is a named list of timed events (key presses, mouse actions and
+    waits) that is replayed exactly as recorded. Macros belong to one
+    application and can be assigned to as many keys as you like (in the main
+    keyboard or inside groups).
+  </p>
+
+  <h3>The macro form</h3>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Field</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>Name</td><td>Shown in the overlay and on the app page.</td></tr>
+        <tr><td>Repeat</td><td>How many times the macro plays back-to-back (1–999).</td></tr>
+        <tr><td>Speed</td><td>Playback multiplier: <code>0.5</code> = half speed, <code>2</code> = twice as fast.</td></tr>
+        <tr><td>Quick Add</td><td>Type a command, press Enter (or <em>Add</em>), and its events are appended.</td></tr>
+        <tr><td>Per-event delay</td><td>Milliseconds added between events created by Quick Add (default 50).</td></tr>
+        <tr><td>Command builder</td><td>Clickable keys and input boxes that build commands for you.</td></tr>
+        <tr><td>Events table</td><td>Every event with its timestamp, type and payload — editable and deletable.</td></tr>
+        <tr><td>Raw JSON</td><td>The exact stored format, kept in sync with the table.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Quick Add commands</h3>
+  <p>
+    Commands are case-insensitive. Each one expands to one or more events,
+    placed at “last event time + per-event delay”. A few examples:
+  </p>
+  <pre class="help-figure">Ctrl+T              press Ctrl+T
+Type "hello"        type the text hello
+Wait 500            pause for 500 ms
+Click 500 300       move to (500,300) and left-click
+Move 100 200        move the cursor to (100,200)
+Scroll down 3       scroll down three steps
+Hold shift          press and keep Shift held
+Release shift       release the held Shift</pre>
+
+  <h3>Key names in macros are different from hotkeys</h3>
+  <p>
+    Hotkey fields use the names in <a href="#keys">All supported keys</a>.
+    The Quick Add language has its own (compatible) names, with a few
+    differences:
+  </p>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Key</th><th>Hotkey name</th><th>Macro (Quick Add) name</th></tr></thead>
+      <tbody>
+        <tr><td>Windows key</td><td><code>win</code></td><td><code>win</code>, <code>meta</code>, <code>cmd</code></td></tr>
+        <tr><td>Numpad digits</td><td><code>num 0</code> … <code>num 9</code></td><td><code>numpad0</code> … <code>numpad9</code>, <code>kp0</code> … <code>kp9</code></td></tr>
+        <tr><td>Page up / down</td><td><code>page up</code>, <code>page down</code></td><td><code>page up</code>, <code>pageup</code>, <code>page down</code>, <code>pagedown</code></td></tr>
+        <tr><td>Print screen</td><td><code>print screen</code>, <code>prtscn</code></td><td><code>print screen</code>, <code>printscreen</code>, <code>prtsc</code></td></tr>
+        <tr><td>Break</td><td><code>break</code></td><td><code>break</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Playing, testing and stopping</h3>
+  <ul class="help-list">
+    <li>
+      <strong>Play:</strong> press the overlay hotkey, then the assigned key.
+      SoftMacro restores focus to the application you came from and waits a
+      moment before replaying, so the macro lands in the right place.
+    </li>
+    <li>
+      <strong>Test:</strong> the <em>▶ Test</em> button on a macro card runs
+      a 3-2-1 countdown so you can switch to the target window; press
+      <code>Esc</code> or click the countdown to cancel.
+    </li>
+    <li>
+      <strong>Stop:</strong> press <code>{{ hotkeys.stop_playback }}</code>
+      while a macro is playing to cancel it immediately.
+    </li>
+  </ul>
+
+  <h3>Events table and raw JSON</h3>
+  <p>Each event is <code>[timestamp_ms, [kind, payload]]</code>:</p>
+  <pre class="help-figure">[
+  [0,  ["key_down", "Key.ctrl_l"]],
+  [12, ["key_down", "t"]],
+  [28, ["key_up",   "t"]],
+  [40, ["key_up",   "Key.ctrl_l"]],
+  [90, ["delay",    500]],
+  [590, ["mouse_move", [500, 300]]],
+  [600, ["mouse_down", "left"]],
+  [620, ["mouse_up",   "left"]]
+]</pre>
+  <p>
+    Valid event kinds: <code>key_down</code>, <code>key_up</code>,
+    <code>mouse_down</code>, <code>mouse_up</code>, <code>mouse_move</code>,
+    <code>scroll</code>, <code>delay</code>. The timestamp is milliseconds
+    from the start of the macro; events play in that order.
+  </p>
+</section>
+
+<!-- ================================================================ COMMANDS -->
+<section class="help-section" id="commands">
+  <h2>Command reference</h2>
+  <p>
+    Every command the Quick Add box understands, with syntax, details and
+    examples.
+  </p>
+  <div class="cmd-grid">
+    {% for c in commands %}
+    <div class="cmd-card">
+      <div class="cmd-syntax">{{ c.syntax }}</div>
+      <div class="cmd-desc">{{ c.description }}</div>
+      {% if c.details %}<div class="cmd-details">{{ c.details }}</div>{% endif %}
+      <ul class="cmd-examples">
+        {% for ex in c.examples %}<li><code>{{ ex }}</code></li>{% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="help-note">
+    Coordinates are absolute screen pixels; <code>(0,0)</code> is the
+    top-left of your primary monitor. For <em>Click</em> and <em>Move</em>,
+    omitting the coordinates uses the current cursor position.
+  </p>
+</section>
+
+<!-- ================================================================= BUILDER -->
+<section class="help-section" id="builder">
+  <h2>Command builder</h2>
+  <p>
+    The builder on the New/Edit macro page is a friendly front-end for the
+    Quick Add commands. Fill in the inputs and click <em>Add</em> — the
+    command is parsed and appended to the events table exactly as if you had
+    typed it.
+  </p>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Block</th><th>What to do</th><th>Produces</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Key press</td>
+          <td>Click keys to build a combination (search to find one), then <em>Add key press</em>.</td>
+          <td><code>ctrl+shift+r</code></td>
+        </tr>
+        <tr>
+          <td>Type text</td>
+          <td>Enter the text (double quotes are removed automatically).</td>
+          <td><code>Type "hello"</code></td>
+        </tr>
+        <tr>
+          <td>Wait</td>
+          <td>Enter milliseconds.</td>
+          <td><code>Wait 500</code></td>
+        </tr>
+        <tr>
+          <td>Click</td>
+          <td>Choose left/right/middle; X and Y are optional.</td>
+          <td><code>Click 500 300</code></td>
+        </tr>
+        <tr>
+          <td>Move</td>
+          <td>Enter X and Y.</td>
+          <td><code>Move 100 200</code></td>
+        </tr>
+        <tr>
+          <td>Scroll</td>
+          <td>Choose a direction and a count.</td>
+          <td><code>Scroll down 3</code></td>
+        </tr>
+        <tr>
+          <td>Hold / Release</td>
+          <td>Choose the action and the key (autocomplete included).</td>
+          <td><code>Hold shift</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================================================================== GROUPS -->
+<section class="help-section" id="groups">
+  <h2>Groups (nested)</h2>
+  <p>
+    Groups are sub-keyboards: a key can open a group instead of playing a
+    macro, and groups can contain further groups to any depth. This lets you
+    fit far more than 26 shortcuts into one app.
+  </p>
+  <ol class="help-steps">
+    <li>
+      On an app page click <em>+ Group</em>. It is created inside the
+      directory you are viewing and is automatically bound to the first free
+      key there.
+    </li>
+    <li>
+      Open the group with <em>Open ›</em> (or the breadcrumb). Inside, assign
+      macros to keys just like at the top level.
+    </li>
+    <li>
+      Use <em>+ Group</em> again inside a group to nest deeper. The
+      breadcrumb (<code>Main › Tabs › Advanced</code>) always shows where you
+      are and lets you jump back up.
+    </li>
+    <li>
+      In the overlay, press the group's key to descend. The subtitle shows
+      the trail, tinted with the current group's colour. <code>Esc</code>
+      goes back one level.
+    </li>
+  </ol>
+  <ul class="help-list">
+    <li>Groups have a name and a colour (used in the UI and the overlay subtitle).</li>
+    <li>A key assignment is unique per directory: the same key can be free in one group and assigned in another.</li>
+    <li>Self-references and cycles (A inside B inside A) are rejected.</li>
+    <li>Deleting a group removes the keys that opened it and clears references from other groups.</li>
+  </ul>
+</section>
+
+<!-- ================================================================ SETTINGS -->
+<section class="help-section" id="settings">
+  <h2>Settings reference</h2>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Section</th><th>Setting</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="2">Hotkeys</td><td>Show macro keyboard</td><td>Global toggle for the overlay.</td></tr>
+        <tr><td>Stop playback</td><td>Cancels a running macro.</td></tr>
+        <tr><td rowspan="3">Overlay appearance</td><td>Border</td><td>Empty space around the overlay, in pixels. <code>0</code> fills the screen.</td></tr>
+        <tr><td>Font size</td><td>Base size of the overlay text.</td></tr>
+        <tr><td>Transparency</td><td><code>1.0</code> solid, <code>0.1</code> nearly invisible.</td></tr>
+        <tr><td>Web UI</td><td>Port</td><td>Where the management UI is served (1024–65535). Changing it briefly restarts the web server and redirects you.</td></tr>
+        <tr><td>Updates</td><td>Check / Install</td><td>Looks for a newer version on GitHub, installs it and offers to restart SoftMacro.</td></tr>
+        <tr><td>Windows startup</td><td>Start automatically</td><td>Runs SoftMacro silently at login via the registry Run key.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- =================================================================== TRAY -->
+<section class="help-section" id="tray">
+  <h2>Tray menu</h2>
+  <p>Right-click the SoftMacro icon near the clock:</p>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Item</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>Open Web UI</td><td>Opens the management UI in your browser.</td></tr>
+        <tr><td>Check for updates</td><td>Opens Settings → Updates.</td></tr>
+        <tr><td>Restart web server</td><td>Rebinds the web UI (useful after a port change).</td></tr>
+        <tr><td>Show macro keyboard</td><td>Same as pressing the show hotkey.</td></tr>
+        <tr><td>Exit</td><td>Shuts SoftMacro down (hotkeys and tray icon stop).</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    To run without a console window, use <code>run_silent.vbs</code>; output
+    is written to <code>%APPDATA%\SoftMacro\softmacro.log</code>.
+  </p>
+</section>
+
+<!-- =================================================================== DATA -->
+<section class="help-section" id="data">
+  <h2>Data &amp; backups</h2>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Path</th><th>Contents</th></tr></thead>
+      <tbody>
+        <tr><td><code>%APPDATA%\SoftMacro\apps\&lt;exe&gt;.json</code></td><td>One file per application: macros, groups and key assignments.</td></tr>
+        <tr><td><code>%APPDATA%\SoftMacro\config.json</code></td><td>Hotkeys, overlay appearance and web port.</td></tr>
+        <tr><td><code>%APPDATA%\SoftMacro\softmacro.log</code></td><td>Log output when running silently.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="help-list">
+    <li><strong>Back up:</strong> copy the whole <code>%APPDATA%\SoftMacro</code> folder.</li>
+    <li><strong>Restore:</strong> copy it back while SoftMacro is closed.</li>
+    <li><strong>Delete an application:</strong> remove its <code>.json</code> file (SoftMacro must be restarted to notice).</li>
+    <li>Updates never touch these files.</li>
+  </ul>
+</section>
+
+<!-- =============================================================== SECURITY -->
+<section class="help-section" id="security">
+  <h2>Security</h2>
+  <p>
+    The web UI can inject keystrokes, so it is deliberately locked down:
+  </p>
+  <ul class="help-list">
+    <li>It listens on <code>127.0.0.1</code> only — never on the network.</li>
+    <li>Non-loopback <code>Host</code> headers are rejected (DNS rebinding), and state-changing requests from foreign origins are rejected (CSRF).</li>
+    <li>Responses carry a Content-Security-Policy and related headers; Flask debug mode is off.</li>
+    <li>Updates come only from the official GitHub repository over HTTPS, with archive validation and a strict file allow-list.</li>
+  </ul>
+</section>
+
+<!-- ========================================================== TROUBLESHOOTING -->
+<section class="help-section" id="troubleshooting">
+  <h2>Troubleshooting</h2>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Problem</th><th>What to try</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>The hotkey does nothing</td>
+          <td>The combination may be taken by Windows or the active app. Change it on the Settings page; if you target elevated (administrator) apps, run SoftMacro as administrator too.</td>
+        </tr>
+        <tr>
+          <td>The overlay is empty</td>
+          <td>No macros are assigned for the app that had focus. Check the app name in the overlay title and assign keys on that app's page.</td>
+        </tr>
+        <tr>
+          <td>A macro types the wrong characters</td>
+          <td>Macros replay physical keys, not text. The <code>Type</code> command handles capitals, but symbols follow the active keyboard layout.</td>
+        </tr>
+        <tr>
+          <td>A macro doesn't play in a game/app</td>
+          <td>Elevated apps and games with anti-cheat ignore injected input. Run SoftMacro at the same privilege level as the target.</td>
+        </tr>
+        <tr>
+          <td>The web UI won't open</td>
+          <td>Check the address printed at startup; if the port is busy, pick another on Settings → Web UI (or restart the server from the tray).</td>
+        </tr>
+        <tr>
+          <td>Update check fails</td>
+          <td>It needs an internet connection to GitHub. Offline machines simply stay on the current version.</td>
+        </tr>
+        <tr>
+          <td>The tray icon is missing</td>
+          <td>Start with <code>run.bat</code> once and check the console output; some setups block tray icons until first run.</td>
+        </tr>
+        <tr>
+          <td>Antivirus complains</td>
+          <td>SoftMacro uses a global keyboard hook and simulated input — the same techniques as any macro tool. Allow it if you trust the source.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Uninstalling</h3>
+  <ol class="help-steps">
+    <li>Untick <em>Start SoftMacro automatically</em> on the Settings page.</li>
+    <li>Exit SoftMacro from the tray menu.</li>
+    <li>Delete the SoftMacro folder and, if you want a clean slate, <code>%APPDATA%\SoftMacro</code>.</li>
+  </ol>
+</section>
+
+<!-- ================================================================== ABOUT -->
+<section class="help-section" id="about">
+  <h2>About</h2>
+  <p>
+    {{ app_title }} — version {{ app_version }}.
+    Source and releases:
+    <a href="https://github.com/JagerWayne/SoftMacro" target="_blank" rel="noopener">github.com/JagerWayne/SoftMacro</a>.
+  </p>
+  <p>
+    Licensed under the
+    <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener">PolyForm Noncommercial 1.0.0</a>
+    license: free for personal, hobby, educational and other noncommercial
+    use. Commercial use — including selling SoftMacro or bundling it into a
+    paid product — is not allowed. Every copy must include the license and
+    the <code>Required Notice:</code> line naming this repository. See the
+    <code>LICENSE</code> file for the full terms.
+  </p>
+  <p class="hint">
+    Found a bug or have an idea? Open an issue on GitHub — the update
+    checker will offer new versions to you automatically.
+  </p>
+</section>
+{% endblock %}

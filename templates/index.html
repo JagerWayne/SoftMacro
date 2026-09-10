@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ app_title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Applications</h1>
+    <p class="sub">
+      Macros are stored per-application. Pick an app to manage its macros,
+      or add a new application to get started.
+    </p>
+  </div>
+  <a href="{{ url_for('new_app') }}" class="btn primary large">
+    <span aria-hidden="true">+</span> New app
+  </a>
+</div>
+
+{% if apps %}
+<div class="app-grid">
+  {% for app in apps %}
+  <a class="card hoverable app-card"
+     href="{{ url_for('view_app', exe=app.exe) }}">
+    <div class="icon">{{ app.display_name[0]|upper }}</div>
+    <div class="meta">
+      <div class="name">{{ app.display_name }}</div>
+      <div class="exe">{{ app.exe }}</div>
+    </div>
+    <div class="counts">
+      <span class="count {% if app.macro_count == 0 %}zero{% endif %}"
+            title="{{ app.macro_count }} macro{{ '' if app.macro_count == 1 else 's' }}">
+        {{ app.macro_count }} macro{{ '' if app.macro_count == 1 else 's' }}
+      </span>
+      <span class="count subtle">
+        {{ app.slot_count }} slot{{ '' if app.slot_count == 1 else 's' }}
+      </span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  <span class="emoji" aria-hidden="true">⌨️</span>
+  <h3>No macros yet</h3>
+  <p>
+    Press your show-overlay hotkey in any app to summon the floating macro
+    keyboard. Macros are created and assigned here in the web UI.
+  </p>
+  <p style="margin-top: 16px;">
+    <a href="{{ url_for('new_app') }}" class="btn primary">+ New app</a>
+  </p>
+</div>
+{% endif %}
+{% endblock %}

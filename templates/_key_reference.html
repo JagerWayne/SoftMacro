@@ -1,0 +1,147 @@
+{# Reusable key picker / reference.
+   Optional variables:
+     key_target : CSS selector for the input the chips write to.
+                  Default: the .hotkey-field that was focused last.
+     key_combos : show the common-combination row (default: true).
+     key_open   : expand the full key list by default (default: false).
+#}
+<div class="key-reference"{% if key_target %} data-target="{{ key_target }}"{% endif %}>
+  <div class="key-toolbar">
+    <input type="search" class="input key-search" placeholder="Search keys…"
+           autocomplete="off" aria-label="Search keys">
+    <button type="button" class="btn ghost small key-clear">Clear</button>
+  </div>
+
+  {% if key_combos is not defined or key_combos %}
+  <div class="combo-row">
+    <span class="combo-label">Combos</span>
+    <div class="key-chips">
+      <button type="button" class="key-chip combo" data-insert="ctrl+c">ctrl+c</button>
+      <button type="button" class="key-chip combo" data-insert="ctrl+v">ctrl+v</button>
+      <button type="button" class="key-chip combo" data-insert="ctrl+x">ctrl+x</button>
+      <button type="button" class="key-chip combo" data-insert="ctrl+z">ctrl+z</button>
+      <button type="button" class="key-chip combo" data-insert="ctrl+s">ctrl+s</button>
+      <button type="button" class="key-chip combo" data-insert="ctrl+t">ctrl+t</button>
+      <button type="button" class="key-chip combo" data-insert="ctrl+w">ctrl+w</button>
+      <button type="button" class="key-chip combo" data-insert="ctrl+a">ctrl+a</button>
+      <button type="button" class="key-chip combo" data-insert="ctrl+shift+r">ctrl+shift+r</button>
+      <button type="button" class="key-chip combo" data-insert="ctrl+alt+delete">ctrl+alt+delete</button>
+      <button type="button" class="key-chip combo" data-insert="ctrl+shift+esc">ctrl+shift+esc</button>
+      <button type="button" class="key-chip combo" data-insert="alt+f4">alt+f4</button>
+      <button type="button" class="key-chip combo" data-insert="win+d">win+d</button>
+      <button type="button" class="key-chip combo" data-insert="ctrl+space">ctrl+space</button>
+      <button type="button" class="key-chip combo" data-insert="pause">pause</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <details class="key-groups-wrap"{% if key_open is defined and key_open %} open{% endif %}>
+    <summary>All supported keys</summary>
+    <div class="key-groups">
+
+      <div class="key-group">
+        <h4>Modifiers</h4>
+        <div class="key-chips">
+          <button type="button" class="key-chip" data-insert="ctrl">ctrl</button>
+          <button type="button" class="key-chip" data-insert="alt">alt</button>
+          <button type="button" class="key-chip" data-insert="shift">shift</button>
+          <button type="button" class="key-chip" data-insert="win">win</button>
+          <button type="button" class="key-chip" data-insert="left ctrl">left ctrl</button>
+          <button type="button" class="key-chip" data-insert="right ctrl">right ctrl</button>
+          <button type="button" class="key-chip" data-insert="left alt">left alt</button>
+          <button type="button" class="key-chip" data-insert="right alt">right alt</button>
+          <button type="button" class="key-chip" data-insert="left shift">left shift</button>
+          <button type="button" class="key-chip" data-insert="right shift">right shift</button>
+          <button type="button" class="key-chip" data-insert="left win">left win</button>
+          <button type="button" class="key-chip" data-insert="right win">right win</button>
+        </div>
+      </div>
+
+      <div class="key-group">
+        <h4>Letters</h4>
+        <div class="key-chips">
+          {% for c in 'abcdefghijklmnopqrstuvwxyz' %}
+          <button type="button" class="key-chip" data-insert="{{ c }}">{{ c }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="key-group">
+        <h4>Numbers</h4>
+        <div class="key-chips">
+          {% for n in range(10) %}
+          <button type="button" class="key-chip" data-insert="{{ n }}">{{ n }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="key-group">
+        <h4>Function keys</h4>
+        <div class="key-chips">
+          {% for n in range(1, 25) %}
+          <button type="button" class="key-chip" data-insert="f{{ n }}">f{{ n }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="key-group">
+        <h4>Numpad</h4>
+        <div class="key-chips">
+          {% for n in range(10) %}
+          <button type="button" class="key-chip" data-insert="num {{ n }}">num {{ n }}</button>
+          {% endfor %}
+          <button type="button" class="key-chip" data-insert="num enter">num enter</button>
+          <button type="button" class="key-chip" data-insert="num add">num add</button>
+          <button type="button" class="key-chip" data-insert="num minus">num minus</button>
+          <button type="button" class="key-chip" data-insert="num multiply">num multiply</button>
+          <button type="button" class="key-chip" data-insert="num divide">num divide</button>
+        </div>
+      </div>
+
+      <div class="key-group">
+        <h4>Editing &amp; navigation</h4>
+        <div class="key-chips">
+          <button type="button" class="key-chip" data-insert="esc">esc</button>
+          <button type="button" class="key-chip" data-insert="tab">tab</button>
+          <button type="button" class="key-chip" data-insert="space">space</button>
+          <button type="button" class="key-chip" data-insert="enter">enter</button>
+          <button type="button" class="key-chip" data-insert="backspace">backspace</button>
+          <button type="button" class="key-chip" data-insert="delete">delete</button>
+          <button type="button" class="key-chip" data-insert="insert">insert</button>
+          <button type="button" class="key-chip" data-insert="home">home</button>
+          <button type="button" class="key-chip" data-insert="end">end</button>
+          <button type="button" class="key-chip" data-insert="page up">page up</button>
+          <button type="button" class="key-chip" data-insert="page down">page down</button>
+          <button type="button" class="key-chip" data-insert="up">up</button>
+          <button type="button" class="key-chip" data-insert="down">down</button>
+          <button type="button" class="key-chip" data-insert="left">left</button>
+          <button type="button" class="key-chip" data-insert="right">right</button>
+        </div>
+      </div>
+
+      <div class="key-group">
+        <h4>System</h4>
+        <div class="key-chips">
+          <button type="button" class="key-chip" data-insert="caps lock">caps lock</button>
+          <button type="button" class="key-chip" data-insert="num lock">num lock</button>
+          <button type="button" class="key-chip" data-insert="scroll lock">scroll lock</button>
+          <button type="button" class="key-chip" data-insert="print screen">print screen</button>
+          <button type="button" class="key-chip" data-insert="pause">pause</button>
+          <button type="button" class="key-chip" data-insert="menu">menu</button>
+          <button type="button" class="key-chip" data-insert="play/pause">play/pause</button>
+        </div>
+      </div>
+
+    </div>
+    <p class="hint">
+      Aliases also work: <code>control</code> = <code>ctrl</code>,
+      <code>windows</code> = <code>win</code>, <code>escape</code> =
+      <code>esc</code>, <code>return</code> = <code>enter</code>,
+      <code>del</code> = <code>delete</code>, <code>ins</code> =
+      <code>insert</code>, <code>pgup</code> = <code>page up</code>,
+      <code>pgdown</code> = <code>page down</code>,
+      <code>prtscn</code> = <code>print screen</code>,
+      <code>numlock</code> = <code>num lock</code>.
+    </p>
+  </details>
+</div>

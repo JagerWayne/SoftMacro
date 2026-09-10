@@ -1,0 +1,107 @@
+SoftMacro -- Event Quick-Add Commands
+======================================
+
+These are the commands accepted by the Quick Add input on the
+'New macro' page. Type a command, press Enter (or click Add), and
+the parsed events are appended to the macro.
+
+Each command expands to one or more events. The events table on the
+web page shows exactly what was generated, and you can edit or
+delete any of them before saving.
+
+Available event kinds: key_down, key_up, mouse_down, mouse_up,
+mouse_move, scroll, delay.
+
+----------------------------------------------------------------
+
+1. Ctrl+T
+   Press a key with optional modifiers.
+   Modifiers come first, joined by '+', then the main key. Recognized modifiers: ctrl (control), shift, alt, win (meta/cmd). The main key can be a letter, digit, or a named special key.
+   Examples:
+     - Ctrl+Z
+     - Ctrl+Shift+R
+     - Alt+F4
+     - Win+E
+     - Ctrl+Alt+Delete
+
+2. Enter
+   Press a single key (no modifier).
+   Common names recognized: enter, return, esc, escape, tab, space, backspace, delete, home, end, page up, page down, up, down, left, right, insert, pause, caps lock, num lock, scroll lock, print screen, menu, f1..f24. Single characters also work.
+   Examples:
+     - Enter
+     - Escape
+     - Tab
+     - Space
+     - F5
+     - Page Down
+     - Up
+     - a
+     - 5
+
+3. Type "hello"
+   Type a string of text, character by character.
+   Wrap the text in double quotes. Each character becomes a key_down + key_up pair; capital letters additionally get explicit shift bracketing. Backslash escapes are not interpreted.
+   Examples:
+     - Type "yes"
+     - Type "user@example.com"
+     - Type "1234"
+
+4. Wait 500
+   Pause for N milliseconds before the next event.
+   Inserts a single 'delay' event whose payload is the number of milliseconds. The player sleeps through it during playback.
+   Examples:
+     - Wait 100
+     - Wait 500
+     - Wait 2000
+
+5. Click 500 300
+   Click the mouse at the given screen coordinates.
+   If x y are omitted, clicks at the current cursor position. Button defaults to left; you can say 'right click' or 'middle click' explicitly.
+   Examples:
+     - Click
+     - Click 500 300
+     - Right click 200 400
+     - Middle click 640 480
+
+6. Move 500 300
+   Move the mouse cursor without clicking.
+   Coordinates are absolute screen pixels.
+   Examples:
+     - Move 100 200
+     - Move 1920 1080
+
+7. Scroll down
+   Scroll the mouse wheel.
+   Direction: up, down, left, right. Optional count after the direction (default 1).
+   Examples:
+     - Scroll up
+     - Scroll down
+     - Scroll up 3
+
+8. Hold Shift
+   Press a key down without releasing it (or release a previously held key).
+   Pairs with another Hold/Release to bracket a modifier or key press across multiple commands.
+   Examples:
+     - Hold shift
+     - Release shift
+     - Hold ctrl
+
+----------------------------------------------------------------
+
+Notes:
+  - Commands are case-insensitive (Ctrl+T == ctrl+t == CTRL+T).
+  - When you add events via Quick Add they are placed at
+    'current time + N ms', where N is the per-event delay you
+    set next to the Quick Add input (default 50 ms).
+  - The 'Type' command quotes its argument with double quotes.
+    Backslash escapes are not interpreted -- the literal text is
+    typed character by character.
+  - 'Wait' accepts s or ms; 'Wait 2' = 2000 ms.
+
+Adding a new command
+-------------------
+  1. Add an entry to the COMMANDS list in event_parser.py.
+  2. Add a parsing branch to parse_command().
+  3. Regenerate this file by running, from the project root:
+         python event_parser.py events.txt
+  4. Add a unit test for the new branch.

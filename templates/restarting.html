@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Restarting — {{ app_title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Restarting SoftMacro…</h1>
+    <p class="sub">
+      The update is being applied and SoftMacro is starting again. This page
+      reloads automatically in a few seconds.
+    </p>
+  </div>
+</div>
+<div class="flash success">
+  If nothing happens, reopen
+  <a href="{{ url_for('settings') }}">Settings</a> in a few seconds.
+</div>
+<script>
+  setTimeout(function () {
+    window.location.href = "{{ url_for('settings') }}";
+  }, 4000);
+</script>
+{% endblock %}

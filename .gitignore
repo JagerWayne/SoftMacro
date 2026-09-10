@@ -1,0 +1,21 @@
+# Python virtual environment
+venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Build outputs
+build/
+dist/
+
+# Local runtime logs
+*.log
+
+# OS junk
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/

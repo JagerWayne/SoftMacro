@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Settings — {{ app_title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('index') }}" class="back">&larr; All applications</a>
+    <h1>Settings</h1>
+    <p class="sub">
+      Configure global hotkeys, the floating overlay's appearance, the web UI
+      port and Windows startup behaviour. Changes take effect immediately.
+    </p>
+  </div>
+</div>
+
+{% if saved %}
+<div class="flash success">Settings saved and applied. Try them now.</div>
+{% endif %}
+{% if port_changed %}
+<div class="flash success">
+  Web UI port changed to <strong>{{ port_changed }}</strong>. The server is
+  restarting — <a href="http://127.0.0.1:{{ port_changed }}/settings">open the new address</a>
+  if this page doesn't redirect.
+</div>
+{% endif %}
+{% if error %}
+<div class="flash error">{{ error }}</div>
+{% endif %}
+
+<form method="POST" action="{{ url_for('settings') }}" id="settings-form">
+
+  <!-- ============================================================ HOTKEYS -->
+  <section class="settings-section">
+    <header class="settings-section-header">
+      <h2>Hotkeys</h2>
+      <p>Global keyboard shortcuts. Type a combination such as
+         <code>ctrl+z</code> or <code>ctrl+shift+r</code> — keys are joined
+         with <code>+</code> and are not case-sensitive.</p>
+    </header>
+
+    <div class="settings-grid">
+      <div class="field">
+        <label for="show_overlay">Show macro keyboard</label>
+        <input type="text" name="show_overlay" id="show_overlay"
+               class="input hotkey-field"
+               value="{{ config.hotkeys.show_overlay }}"
+               placeholder="ctrl+z" autocomplete="off" spellcheck="false">
+        <span class="hint">Opens the floating macro keyboard for the foreground app.</span>
+      </div>
+
+      <div class="field">
+        <label for="stop_playback">Stop playback</label>
+        <input type="text" name="stop_playback" id="stop_playback"
+               class="input hotkey-field"
+               value="{{ config.hotkeys.stop_playback }}"
+               placeholder="pause" autocomplete="off" spellcheck="false">
+        <span class="hint">Cancels a macro that's currently playing back.</span>
+      </div>
+    </div>
+
+    <div class="hotkey-help">
+      <div class="hotkey-help-head">
+        <strong>Key combination examples</strong>
+        <span>Click a key to add it to the hotkey field you last clicked
+              (a full combo replaces the field).</span>
+      </div>
+      {% include "_key_reference.html" %}
+    </div>
+  </section>
+
+  <!-- ========================================================== APPEARANCE -->
+  <section class="settings-section">
+    <header class="settings-section-header">
+      <h2>Overlay appearance</h2>
+      <p>How the floating keyboard looks on screen when you trigger it.</p>
+    </header>
+
+    <div class="settings-grid">
+      <div class="field">
+        <label for="overlay_border_px">
+          Border
+          <span class="field-unit">px</span>
+        </label>
+        <input type="number" name="overlay_border_px" id="overlay_border_px"
+               class="input" min="0" max="400" step="1"
+               value="{{ config.overlay.border_px }}">
+        <span class="hint">Space around the edges. 0 fills the screen; 20 is a thin frame; 100+ makes a small floating window.</span>
+      </div>
+
+      <div class="field">
+        <label for="overlay_font_size">
+          Font size
+          <span class="field-unit">pt</span>
+        </label>
+        <input type="number" name="overlay_font_size" id="overlay_font_size"
+               class="input" min="10" max="64" step="1"
+               value="{{ config.overlay.font_size }}">
+        <span class="hint">Base size for shortcut rows. The app name and labels scale too.</span>
+      </div>
+
+      <div class="field">
+        <label for="overlay_alpha">
+          Transparency
+          <span class="field-unit">0.1 – 1.0</span>
+        </label>
+        <input type="number" name="overlay_alpha" id="overlay_alpha"
+               class="input" min="0.1" max="1.0" step="0.05"
+               value="{{ config.overlay.alpha }}">
+        <span class="hint">1.0 is fully solid, 0.1 is nearly invisible. 0.7–0.85 reads well.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================== WEB UI -->
+  <section class="settings-section">
+    <header class="settings-section-header">
+      <h2>Web UI</h2>
+      <p>The management interface is served on this PC only
+         (<code>127.0.0.1</code>) — it is never reachable from other
+         devices.</p>
+    </header>
+
+    <div class="settings-grid">
+      <div class="field">
+        <label for="web_port">Port</label>
+        <input type="number" name="web_port" id="web_port" class="input"
+               min="1024" max="65535" step="1"
+               value="{{ web_port }}" required>
+        <span class="hint">Address after saving:
+          <code>http://127.0.0.1:{{ web_port }}</code>.
+          Changing the port briefly restarts the web server; your macros keep
+          working. Ports below 1024 need administrator rights.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================== ACTIONS -->
+  <div class="settings-actions">
+    <button type="submit" class="btn primary large">Save all settings</button>
+    <a href="{{ url_for('index') }}" class="btn ghost">Cancel</a>
+  </div>
+</form>
+
+<!-- ================================================================ STARTUP -->
+<section class="settings-section">
+  <header class="settings-section-header">
+    <h2>Windows startup</h2>
+    <p>Run SoftMacro automatically when Windows starts. Lives in the system tray.</p>
+  </header>
+
+  <form method="POST" action="{{ url_for('toggle_autostart') }}" class="settings-form-inline">
+    <label class="settings-toggle">
+      <input type="checkbox" name="autostart"
+             {% if autostart_enabled %}checked{% endif %}
+             onchange="this.form.submit()">
+      <span class="settings-toggle-text">
+        <strong>Start SoftMacro automatically when Windows starts</strong>
+        <small>Runs hidden in the background (no console window) with a tray icon. Toggle this any time.</small>
+      </span>
+    </label>
+  </form>
+</section>
+
+<!-- ================================================================== UPDATES -->
+<section class="settings-section" id="updates">
+  <header class="settings-section-header">
+    <h2>Updates</h2>
+    <p>Check GitHub for a newer SoftMacro and install it. Updates are
+       downloaded over HTTPS from the official repository only.</p>
+  </header>
+
+  {% if update.status == 'update' %}
+  <div class="flash success">
+    Version <strong>{{ update.latest }}</strong> is available — you have
+    <strong>{{ app_version }}</strong>.
+  </div>
+  {% elif update.status == 'current' %}
+  <div class="flash success">You are up to date ({{ app_version }}).</div>
+  {% elif update.status == 'installed' %}
+  <div class="flash success">
+    Update installed{% if update.latest %} ({{ update.latest }}){% endif %} —
+    restart SoftMacro to apply it.
+  </div>
+  {% elif update.status == 'installing' %}
+  <div class="flash success">
+    The installer is running{% if update.latest %} ({{ update.latest }}){% endif %} —
+    SoftMacro will close and reopen automatically.
+  </div>
+  {% elif update.status == 'error' %}
+  <div class="flash error">Update check failed: {{ update.error }}</div>
+  {% endif %}
+
+  {% if update.status == 'update' and update.notes %}
+  <details class="update-notes">
+    <summary>What's new in {{ update.latest }}</summary>
+    <pre>{{ update.notes }}</pre>
+  </details>
+  {% endif %}
+
+  <div class="update-actions">
+    <form method="POST" action="{{ url_for('check_updates') }}">
+      <button type="submit" class="btn">Check for updates</button>
+    </form>
+    {% if update.status == 'update' %}
+    <form method="POST" action="{{ url_for('install_update_route') }}">
+      <button type="submit" class="btn primary">Install {{ update.latest }}</button>
+    </form>
+    {% endif %}
+    {% if update.status == 'installed' %}
+    <form method="POST" action="{{ url_for('restart_app') }}">
+      <button type="submit" class="btn primary">Restart SoftMacro now</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <p class="hint">
+    Current version: <code>{{ app_version }}</code>. Installing replaces the
+    program files only — your macros in
+    <code>%APPDATA%\SoftMacro</code> are never touched.
+  </p>
+</section>
+
+<script src="{{ url_for('static', filename='key_reference.js') }}?v=1"></script>
+{% if port_changed %}
+<script>
+  setTimeout(function () {
+    window.location.href = "http://127.0.0.1:{{ port_changed }}/settings";
+  }, 2000);
+</script>
+{% endif %}
+{% endblock %}

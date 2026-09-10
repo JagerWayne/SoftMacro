@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+{% block title %}{{ app.display_name }} — {{ app_title }}{% endblock %}
+
+{#
+  Renders one key of the on-screen keyboard. The server already resolved the
+  binding, so the template only paints the state:
+    free | macro | group | unknown
+#}
+{% macro key_button(key, action, dir_id) %}
+  {%- if key.kind == 'group' -%}
+    {%- set title = key.label ~ ' — opens group “' ~ key.target_name ~ '”' -%}
+  {%- elif key.kind == 'macro' -%}
+    {%- set title = key.label ~ ' — plays “' ~ key.target_name ~ '”' -%}
+  {%- elif key.kind == 'unknown' -%}
+    {%- set title = key.label ~ ' — unknown target' -%}
+  {%- else -%}
+    {%- set title = key.label ~ ' — free, click to assign' -%}
+  {%- endif -%}
+  <button type="button"
+          class="kb-key {{ key.kind }}"
+          data-dir="{{ dir_id }}"
+          data-slot="{{ key.slot }}"
+          data-label="{{ key.label }}"
+          data-target="{{ key.target_id }}"
+          data-action="{{ action }}"
+          {% if key.color %}style="--key-color: {{ key.color }};"{% endif %}
+          title="{{ title }}">{{ key.label }}</button>
+{% endmacro %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('index') }}" class="back">&larr; All applications</a>
+    <h1>{{ app.display_name }}</h1>
+    <p class="sub"><code>{{ app.exe }}</code></p>
+  </div>
+</div>
+
+<!------------------------------------------------------------ toolbar -->
+<div class="app-toolbar">
+  <form method="POST" action="{{ url_for('rename_app', exe=app.exe) }}"
+        class="app-rename">
+    <label for="display_name">Display name</label>
+    <input type="text" name="display_name" id="display_name" class="input"
+           value="{{ app.display_name }}" maxlength="64">
+    <button type="submit" class="btn small">Save</button>
+  </form>
+  <div class="app-stats">
+    <span class="stat-chip">{{ app.macros|length }} macro{{ '' if app.macros|length == 1 else 's' }}</span>
+    <span class="stat-chip">{{ app.groups|length }} group{{ '' if app.groups|length == 1 else 's' }}</span>
+    <span class="stat-chip">{{ bound_total }} key{{ '' if bound_total == 1 else 's' }} bound</span>
+  </div>
+</div>
+
+<!------------------------------------------------------ two-column body -->
+<div class="app-two-col">
+
+  <!------------------------------------------------ LEFT: macros ------>
+  <section class="col-macros">
+    <header class="col-head">
+      <h2>Macros <span class="count-badge">{{ app.macros|length }}</span></h2>
+      <a href="{{ url_for('new_macro', exe=app.exe) }}" class="btn primary small">
+        <span aria-hidden="true">+</span> New macro
+      </a>
+    </header>
+
+    {% if app.macros %}
+    <div class="macro-cards">
+      {% for macro in app.macros %}
+        {% set binds = macro_bindings.get(macro.id, []) %}
+        <article class="macro-card-v2 {% if not binds %}is-unassigned{% endif %}">
+          <div class="mcv-top">
+            <div class="mcv-info">
+              <div class="mcv-name">{{ macro.name }}</div>
+              <div class="mcv-stats">
+                <span class="stat-chip">{{ macro.events|length }} event{{ '' if macro.events|length == 1 else 's' }}</span>
+                {% if macro.events %}
+                  <span class="stat-chip">{{ "%.2f"|format(macro.events[-1][0] / 1000.0) }}s</span>
+                {% endif %}
+                {% if macro.repeat and macro.repeat > 1 %}
+                  <span class="stat-chip">×{{ macro.repeat }}</span>
+                {% endif %}
+                {% if macro.speed and macro.speed != 1.0 %}
+                  <span class="stat-chip">{{ macro.speed }}× speed</span>
+                {% endif %}
+                {% if macro.plays %}
+                  <span class="stat-chip">{{ macro.plays }} play{{ '' if macro.plays == 1 else 's' }}</span>
+                {% endif %}
+              </div>
+              <div class="mcv-keys">
+                {% if binds %}
+                  {% for b in binds %}
+                    <a class="key-chip{% if b.color %} group-key{% endif %}"
+                       href="{{ url_for('view_app', exe=app.exe, dir=b.dir_id) }}"
+                       {% if b.color %}style="--chip-color: {{ b.color }};"{% endif %}
+                       title="{{ b.dir_name }} — jump to this keyboard">
+                      {%- if b.dir_id != 'main' %}{{ b.dir_name }}: {% endif %}{{ b.label -}}
+                    </a>
+                  {% endfor %}
+                {% else %}
+                  <span class="unbound">Not bound to any key</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="mcv-actions">
+              <form method="POST"
+                    action="{{ url_for('test_macro', exe=app.exe, macro_id=macro.id) }}"
+                    class="inline-form"
+                    title="3-2-1 countdown, then plays.">
+                <button type="submit" class="btn small">▶ Test</button>
+              </form>
+              <a href="{{ url_for('edit_macro', exe=app.exe, macro_id=macro.id) }}"
+                 class="btn small">Edit</a>
+              <form method="POST"
+                    action="{{ url_for('delete_macro', exe=app.exe, macro_id=macro.id) }}"
+                    class="inline-form"
+                    onsubmit="return confirm('Delete macro “{{ macro.name }}”? Its key bindings will be cleared.');">
+                <button type="submit" class="btn small danger">Delete</button>
+              </form>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-inline">
+      <span class="emoji">📋</span>
+      <p>No macros yet.<br>
+        <a href="{{ url_for('new_macro', exe=app.exe) }}">Create your first macro</a>
+        to start binding keys.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <!------------------------------------------ RIGHT: key assignments -->
+  <section class="col-assign">
+    <header class="col-head">
+      <h2>Key assignments</h2>
+      <span class="count-badge">{{ bindings|length }} in this set</span>
+    </header>
+
+    <nav class="dir-crumbs" aria-label="Key assignment sets">
+      {% for c in breadcrumbs %}
+        {% if not loop.last %}
+          <a class="crumb" href="{{ url_for('view_app', exe=app.exe, dir=c.id) }}">
+            {% if c.color %}<span class="group-dot" style="background: {{ c.color }};"></span>{% endif %}{{ c.name }}
+          </a>
+          <span class="crumb-sep" aria-hidden="true">›</span>
+        {% else %}
+          <span class="crumb current" aria-current="page">
+            {% if c.color %}<span class="group-dot" style="background: {{ c.color }};"></span>{% endif %}{{ c.name }}
+          </span>
+        {% endif %}
+      {% endfor %}
+
+      <details class="tab-add">
+        <summary class="crumb-add" title="Create a group">+ Group</summary>
+        <form class="tab-add-form" method="POST"
+              action="{{ url_for('new_group', exe=app.exe) }}">
+          <input type="hidden" name="parent" value="{{ selected_dir }}">
+          <div class="row">
+            <input type="text" name="name" class="input" placeholder="Group name"
+                   required maxlength="48" aria-label="Group name">
+            <input type="color" name="color" value="#88c0ff" class="color-input"
+                   title="Group colour">
+          </div>
+          <button type="submit" class="btn primary small">Create group</button>
+          <span class="hint">
+            Created inside <strong>{{ (breadcrumbs|last).name }}</strong>
+            and bound to its first free key.
+          </span>
+        </form>
+      </details>
+    </nav>
+
+    <div class="assign-panel">
+      {% if selected_group %}
+      <div class="dir-toolbar">
+        <form class="dir-rename" method="POST"
+              action="{{ url_for('rename_group', exe=app.exe, group_id=selected_group.id) }}">
+          <input type="color" name="color" value="{{ selected_group.color }}"
+                 class="color-input" title="Group colour">
+          <input type="text" name="name" value="{{ selected_group.name }}"
+                 class="input" required maxlength="48" aria-label="Group name">
+          <button type="submit" class="btn small">Save</button>
+        </form>
+        <form method="POST"
+              action="{{ url_for('delete_group', exe=app.exe, group_id=selected_group.id) }}"
+              class="inline-form"
+              onsubmit="return confirm('Delete group “{{ selected_group.name }}”? Keys that open it will be cleared.');">
+          <button type="submit" class="btn small danger">Delete group</button>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if subgroups %}
+      <div class="subgroups">
+        <h4>Sub-groups</h4>
+        <div class="subgroup-list">
+          {% for s in subgroups %}
+          <a class="subgroup" href="{{ url_for('view_app', exe=app.exe, dir=s.id) }}">
+            <span class="subgroup-key">{{ s.label }}</span>
+            <span class="group-dot" style="background: {{ s.color }};"></span>
+            <span class="subgroup-name">{{ s.name }}</span>
+            <span class="subgroup-meta">{{ s.count }} item{{ '' if s.count == 1 else 's' }}</span>
+            <span class="subgroup-open">Open ›</span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="kb-legend">
+        <span><span class="kb-swatch macro"></span> macro</span>
+        <span><span class="kb-swatch group"></span> group</span>
+        <span><span class="kb-swatch free"></span> free</span>
+        <span class="kb-legend-hint">Click a key to assign · Esc closes</span>
+      </div>
+
+      <div class="keyboard">
+        <div class="kb-row kb-fkeys">
+          {% for k in keyboard.fkeys %}{{ key_button(k, action, selected_dir) }}{% endfor %}
+        </div>
+        <div class="kb-lower">
+          <div class="kb-qwerty">
+            {% for row in keyboard.qwerty %}
+              <div class="kb-row" data-row="{{ loop.index0 }}">
+                {% for k in row %}{{ key_button(k, action, selected_dir) }}{% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+          <div class="kb-numpad">
+            {% for row in keyboard.numpad %}
+              <div class="kb-row">
+                {% for k in row %}{{ key_button(k, action, selected_dir) }}{% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="bindings">
+        <h4>Bindings <span class="count-badge">{{ bindings|length }}</span></h4>
+        {% if bindings %}
+        <ul class="binding-list">
+          {% for b in bindings %}
+          <li class="binding">
+            <span class="binding-key">{{ b.label }}</span>
+            <span class="binding-arrow">→</span>
+            {% if b.kind == 'group' %}
+              <span class="binding-dot" style="background: {{ b.color }};"></span>
+              <span class="binding-name">{{ b.target_name }}</span>
+              <span class="binding-kind">group</span>
+            {% else %}
+              <span class="binding-name">{{ b.target_name }}</span>
+            {% endif %}
+            <form method="POST" action="{{ action }}" class="inline-form binding-remove">
+              <input type="hidden" name="letter" value="{{ b.slot }}">
+              <input type="hidden" name="macro_id" value="">
+              <input type="hidden" name="dir" value="{{ selected_dir }}">
+              <button type="submit" class="icon-btn" title="Remove binding"
+                      aria-label="Remove {{ b.label }} binding">×</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="bindings-empty">No keys bound in this set yet — click a key above to assign one.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+</div>
+
+<!------------------------------------------------- assign popover ----->
+<div class="assign-pop" id="assign-pop" hidden>
+  <div class="assign-pop-head">
+    <span class="assign-pop-key" id="assign-pop-key">Q</span>
+    <input type="text" id="assign-pop-search" class="assign-pop-search"
+           placeholder="Filter…" autocomplete="off" spellcheck="false"
+           aria-label="Filter targets">
+  </div>
+  <div class="assign-pop-list" id="assign-pop-list" role="listbox"
+       aria-label="Assign to"></div>
+  <div class="assign-pop-foot">
+    <button type="button" class="btn small ghost" id="assign-pop-clear">Clear binding</button>
+  </div>
+</div>
+
+<form method="POST" id="assign-form" hidden>
+  <input type="hidden" name="letter" id="assign-form-letter">
+  <input type="hidden" name="macro_id" id="assign-form-target">
+  <input type="hidden" name="dir" value="{{ selected_dir }}">
+</form>
+
+<script type="application/json" id="assign-data">{{ targets_json|safe }}</script>
+
+<script>
+(function () {
+  var pop = document.getElementById('assign-pop');
+  if (!pop) return;
+
+  var list = document.getElementById('assign-pop-list');
+  var search = document.getElementById('assign-pop-search');
+  var keyLabel = document.getElementById('assign-pop-key');
+  var clearBtn = document.getElementById('assign-pop-clear');
+  var form = document.getElementById('assign-form');
+  var formLetter = document.getElementById('assign-form-letter');
+  var formTarget = document.getElementById('assign-form-target');
+
+  var data = {};
+  try {
+    data = JSON.parse(document.getElementById('assign-data').textContent || '{}');
+  } catch (err) {
+    data = {};
+  }
+  var targets = data.targets || [];
+  var currentKey = null;
+  var activeIndex = -1;
+
+  function itemNodes() {
+    return Array.prototype.slice.call(list.querySelectorAll('.assign-pop-item'));
+  }
+
+  function setActive(index) {
+    var nodes = itemNodes();
+    if (!nodes.length) { activeIndex = -1; return; }
+    if (index < 0) index = nodes.length - 1;
+    if (index >= nodes.length) index = 0;
+    activeIndex = index;
+    nodes.forEach(function (node, i) {
+      node.classList.toggle('active', i === index);
+    });
+    nodes[index].scrollIntoView({ block: 'nearest' });
+  }
+
+  function choose(targetId) {
+    if (!currentKey) return;
+    form.action = currentKey.getAttribute('data-action');
+    formLetter.value = currentKey.getAttribute('data-slot');
+    formTarget.value = targetId || '';
+    form.submit();
+  }
+
+  function render() {
+    var query = search.value.trim().toLowerCase();
+    var current = currentKey ? (currentKey.getAttribute('data-target') || '') : '';
+    list.innerHTML = '';
+    var shown = 0;
+
+    targets.forEach(function (target) {
+      if (query && target.name.toLowerCase().indexOf(query) === -1) return;
+      shown += 1;
+
+      var item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'assign-pop-item' + (target.id === current ? ' current' : '');
+      item.setAttribute('data-id', target.id);
+
+      var dot = document.createElement('span');
+      dot.className = 'assign-pop-dot';
+      if (target.color) dot.style.background = target.color;
+
+      var name = document.createElement('span');
+      name.className = 'assign-pop-name';
+      name.textContent = target.name;
+
+      var kind = document.createElement('span');
+      kind.className = 'assign-pop-kind';
+      kind.textContent = target.kind === 'group' ? 'group' : 'macro';
+
+      item.appendChild(dot);
+      item.appendChild(name);
+      item.appendChild(kind);
+      item.addEventListener('click', function () {
+        choose(target.id === current ? '' : target.id);
+      });
+      list.appendChild(item);
+    });
+
+    if (!shown) {
+      var empty = document.createElement('div');
+      empty.className = 'assign-pop-empty';
+      empty.textContent = query
+        ? 'No matches.'
+        : 'Nothing to assign — create a macro first.';
+      list.appendChild(empty);
+    }
+
+    var selected = list.querySelector('.assign-pop-item.current');
+    activeIndex = -1;
+    if (selected) setActive(itemNodes().indexOf(selected));
+  }
+
+  function place(key) {
+    var rect = key.getBoundingClientRect();
+    var width = pop.offsetWidth;
+    var height = pop.offsetHeight;
+    var pageX = window.pageXOffset;
+    var pageY = window.pageYOffset;
+
+    var left = rect.left + pageX + rect.width / 2 - width / 2;
+    var maxLeft = pageX + document.documentElement.clientWidth - width - 10;
+    left = Math.max(pageX + 10, Math.min(left, maxLeft));
+
+    var top = rect.bottom + pageY + 8;
+    if (rect.bottom + height + 16 > window.innerHeight && rect.top - height - 8 > 0) {
+      top = rect.top + pageY - height - 8;
+    }
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+  }
+
+  function open(key) {
+    currentKey = key;
+    keyLabel.textContent = key.getAttribute('data-label') || key.textContent.trim();
+    clearBtn.hidden = !key.getAttribute('data-target');
+    search.value = '';
+    pop.hidden = false;
+    render();
+    place(key);
+    search.focus();
+  }
+
+  function close() {
+    pop.hidden = true;
+    currentKey = null;
+  }
+
+  document.addEventListener('click', function (event) {
+    var key = event.target.closest ? event.target.closest('.kb-key') : null;
+    if (key) {
+      event.preventDefault();
+      if (currentKey === key) { close(); } else { open(key); }
+      return;
+    }
+    if (!pop.hidden && !pop.contains(event.target)) close();
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (pop.hidden) return;
+    if (event.key === 'Escape') { close(); return; }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActive(activeIndex + 1);
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActive(activeIndex - 1);
+      return;
+    }
+    if (event.key === 'Enter') {
+      var nodes = itemNodes();
+      if (activeIndex >= 0 && nodes[activeIndex]) {
+        event.preventDefault();
+        nodes[activeIndex].click();
+      }
+    }
+  });
+
+  search.addEventListener('input', render);
+  clearBtn.addEventListener('click', function () { choose(''); });
+  window.addEventListener('resize', function () {
+    if (!pop.hidden && currentKey) place(currentKey);
+  });
+})();
+</script>
+{% endblock %}

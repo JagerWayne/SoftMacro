@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_title }}{% endblock %}</title>
+  <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%236366f1'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='15' font-weight='700' text-anchor='middle' fill='white'%3ESM%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{{ url_for('index') }}">
+        <span class="brand-mark" aria-hidden="true">
+          <span class="key">A</span><span class="key">B</span><span class="key">C</span>
+        </span>
+        <span class="brand-name">{{ app_title }}</span>
+      </a>
+
+      <nav class="topnav">
+        <a href="{{ url_for('index') }}"
+           class="topnav-link {% if request.endpoint == 'index' %}active{% endif %}">Apps</a>
+        <a href="{{ url_for('help_page') }}"
+           class="topnav-link {% if request.endpoint == 'help_page' %}active{% endif %}">Help</a>
+        <a href="{{ url_for('settings') }}"
+           class="topnav-link {% if request.endpoint == 'settings' %}active{% endif %}">Settings</a>
+        <a href="https://github.com/JagerWayne/SoftMacro"
+           class="topnav-link external" target="_blank" rel="noopener">GitHub &nearr;</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="bottombar">
+    <div class="bottombar-inner">
+      <span>
+        Press your show-overlay hotkey in any app to open the floating macro keyboard.
+      </span>
+      <span class="data-dir">
+        <a class="bottombar-link" href="https://github.com/JagerWayne/SoftMacro"
+           target="_blank" rel="noopener">github.com/JagerWayne/SoftMacro</a>
+        &nbsp;·&nbsp; Data: <code>%APPDATA%\SoftMacro\apps</code>
+      </span>
+    </div>
+  </footer>
+</body>
+</html>
