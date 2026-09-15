@@ -28,6 +28,7 @@ a configurable border.
 
 from __future__ import annotations
 
+import time
 import tkinter as tk
 from typing import Callable
 
@@ -74,6 +75,10 @@ class Overlay:
 
         # Active test-countdown window state (see show_countdown).
         self._countdown: dict | None = None
+
+        # Debounce for Esc: the Tk binding and the global Esc hook can both
+        # fire for one keypress. A few tens of ms apart is still one press.
+        self._last_escape_at = 0.0
 
         self.root = tk.Tk()
         self.root.withdraw()
@@ -566,13 +571,17 @@ class Overlay:
         Called by the Tk ``<Escape>`` binding and by the global Esc hook
         (see ``hotkey.register_overlay_escape``) so it works even when the
         window did not receive keyboard focus. No-ops when already hidden,
-        because on some systems both paths can fire for one keypress.
+        and debounces the two paths so one keypress steps back only once.
         """
         try:
             if not self.win.winfo_viewable():
                 return
         except tk.TclError:
             return
+        now = time.monotonic()
+        if now - self._last_escape_at < 0.12:
+            return
+        self._last_escape_at = now
         self._on_escape()
 
     def _make_key_handler(self, slot: str):

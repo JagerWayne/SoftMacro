@@ -18,6 +18,7 @@ from __future__ import annotations
 import queue
 import re
 import threading
+from typing import Callable
 
 import keyboard
 
@@ -41,14 +42,26 @@ _esc_lock = threading.Lock()
 
 
 def register_overlay_escape(sink: queue.Queue) -> None:
-    """Start capturing Esc globally (no-op if already capturing)."""
+    """Start watching Esc globally (no-op if already watching).
+
+    Deliberately **not** suppressed. ``add_hotkey(..., suppress=True)``
+    never fires for a single non-modifier key in the ``keyboard`` library,
+    and suppressing Esc there also stops the overlay's own Tk ``<Escape>``
+    binding from ever seeing the key -- so Esc did nothing at all. Leaving
+    it unsuppressed means both the global hook and the focused overlay can
+    handle it (``Overlay.handle_escape`` debounces the double call), which
+    keeps Esc working even if one of the two paths is unavailable.
+    """
     global _esc_handle
     with _esc_lock:
         if _esc_handle is not None:
             return
-        _esc_handle = keyboard.add_hotkey(
-            "esc", lambda: sink.put(("escape", None)), suppress=True
-        )
+
+        def on_esc(event) -> None:
+            if event.event_type == keyboard.KEY_DOWN:
+                sink.put(("escape", None))
+
+        _esc_handle = keyboard.hook_key("esc", on_esc, suppress=False)
 
 
 def unregister_overlay_escape() -> None:
@@ -58,18 +71,37 @@ def unregister_overlay_escape() -> None:
         if _esc_handle is None:
             return
         try:
-            keyboard.remove_hotkey(_esc_handle)
+            keyboard.unhook(_esc_handle)
         except Exception:
             pass
         _esc_handle = None
 
 
-def _take_esc_handle():
-    """Forget the Esc handle (used after ``unhook_all_hotkeys``)."""
-    global _esc_handle
+def _esc_active() -> bool:
     with _esc_lock:
-        handle, _esc_handle = _esc_handle, None
-        return handle
+        return _esc_handle is not None
+
+
+def _register_action(combo: str, callback) -> Callable[[], None]:
+    """Register one action hotkey and return a function that removes it.
+
+    ``keyboard.add_hotkey(..., suppress=True)`` never fires when the hotkey
+    is a single non-modifier key (e.g. the default ``pause``), so single
+    keys use ``hook_key``, which can block one key. Combos keep using
+    ``add_hotkey``. The returned remover hides the different teardown APIs
+    (``remove_hotkey`` vs ``unhook``).
+    """
+    if "+" in combo:
+        handle = keyboard.add_hotkey(combo, callback, suppress=True)
+        return lambda: keyboard.remove_hotkey(handle)
+
+    def on_key(event) -> bool:
+        if event.event_type == keyboard.KEY_DOWN:
+            callback()
+        return False
+
+    handle = keyboard.hook_key(combo, on_key, suppress=True)
+    return lambda: keyboard.unhook(handle)
 
 
 _KEY_ERROR = re.compile(r"Key '([^']+)' is not mapped")
@@ -99,6 +131,7 @@ class HotkeyListener(threading.Thread):
         self.sink = sink
         self._stopped = False
         self._lock = threading.Lock()
+        self._removers: list[Callable[[], None]] = []
 
     def run(self) -> None:
         with self._lock:
@@ -118,10 +151,8 @@ class HotkeyListener(threading.Thread):
 
     def stop(self) -> None:
         self._stopped = True
-        try:
-            keyboard.unhook_all_hotkeys()
-        except Exception:
-            pass
+        unregister_overlay_escape()
+        self._unregister_all()
 
     def reload(self) -> None:
         """Unregister everything and re-register from current config.
@@ -129,12 +160,12 @@ class HotkeyListener(threading.Thread):
         Safe to call from any thread.
         """
         with self._lock:
-            try:
-                keyboard.unhook_all_hotkeys()
-            except Exception:
-                pass
-            # unhook_all_hotkeys() also dropped the overlay Esc capture.
-            esc_was_active = _take_esc_handle() is not None
+            # unhook_all_hotkeys() does NOT clear single-key hooks (the
+            # overlay Esc capture and any single-key action), so remove them
+            # explicitly first.
+            esc_was_active = _esc_active()
+            unregister_overlay_escape()
+            self._unregister_all()
             try:
                 self._register_all()
                 if esc_was_active:
@@ -151,11 +182,24 @@ class HotkeyListener(threading.Thread):
         for name, evt in _ACTIONS.items():
             combo = hk.get(name)
             if combo:
-                keyboard.add_hotkey(
-                    combo,
-                    lambda e=evt: self.sink.put(e),
-                    suppress=True,
-                )
-                print(f"[SoftMacro]   {name} = {combo}")
+                try:
+                    self._removers.append(
+                        _register_action(combo, lambda e=evt: self.sink.put(e))
+                    )
+                    print(f"[SoftMacro]   {name} = {combo}")
+                except Exception as e:
+                    print(f"[SoftMacro]   {name} = {combo} (failed: {e})")
             else:
                 print(f"[SoftMacro]   {name} = (disabled)")
+
+    def _unregister_all(self) -> None:
+        for remove in self._removers:
+            try:
+                remove()
+            except Exception:
+                pass
+        self._removers = []
+        try:
+            keyboard.unhook_all_hotkeys()
+        except Exception:
+            pass
