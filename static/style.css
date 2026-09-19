@@ -1525,14 +1525,16 @@ button.key-chip.combo {
   margin-top: 16px;
 }
 
-/* Overlay Appearance page: expert mode + geometry visibility. */
+/* Overlay Appearance page: expert mode + geometry visibility.
+   Body state classes are prefixed (overlay-*) so they never collide with the
+   field classes they control (expert-only / geom-custom / geom-fullscreen). */
 .expert-toggle { margin-bottom: 18px; }
 .expert-only { display: none !important; }
-body.expert-mode .expert-only { display: flex !important; }
+body.overlay-expert .expert-only { display: flex !important; }
 
 .geom-custom { display: none !important; }
-body.geom-custom .geom-custom { display: flex !important; }
-body.geom-custom .geom-fullscreen { display: none !important; }
+body.overlay-custom .geom-custom { display: flex !important; }
+body.overlay-custom .geom-fullscreen { display: none !important; }
 
 .color-input {
   width: 100%;

@@ -267,7 +267,7 @@
 
     var expert = document.getElementById("expert-toggle");
     function applyExpert() {
-      document.body.classList.toggle("expert-mode", expert.checked);
+      document.body.classList.toggle("overlay-expert", expert.checked);
       try { localStorage.setItem(EXPERT_KEY, expert.checked ? "1" : "0"); } catch (e) {}
     }
     try { expert.checked = localStorage.getItem(EXPERT_KEY) === "1"; } catch (e) {}
@@ -276,7 +276,7 @@
 
     var mode = document.getElementById("window_mode");
     function applyMode() {
-      document.body.classList.toggle("geom-custom", mode.value === "custom");
+      document.body.classList.toggle("overlay-custom", mode.value === "custom");
     }
     mode.addEventListener("change", applyMode);
     applyMode();
