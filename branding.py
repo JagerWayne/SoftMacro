@@ -1,6 +1,6 @@
 """Product branding used in window titles, the web UI and the tray icon."""
 
 APP_NAME = "SoftMacro"
-APP_VERSION = "APP_VERSION = "1.3.2""
+APP_VERSION = "1.3.3"
 APP_AUTHOR = "Wayne Scicluna"
 APP_TITLE = f"{APP_NAME} v{APP_VERSION} by {APP_AUTHOR}"

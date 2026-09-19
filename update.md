@@ -24,11 +24,23 @@ Let `V` be the version (e.g. `1.3.0`) and tag it `v{V}`.
 
 ## 2. Sanity check
 
+Compile **every** Python file in the repo (a version-bump edit has corrupted a
+module string before, so never compile only a hand-picked subset):
+
 ```powershell
-.\venv\Scripts\python.exe -m py_compile anim.py overlay.py app.py web.py config.py storage.py hotkey.py player.py
+.\venv\Scripts\python.exe -m compileall -q -x "venv|build|dist|tools" .
 ```
 
-Fix anything broken before continuing.
+Any output (other than nothing) means a syntax error — fix it before
+continuing.
+
+Verify the version string is well-formed and importable:
+
+```powershell
+.\venv\Scripts\python.exe -c "import branding; print(branding.APP_VERSION)"
+```
+
+It must print `{V}`.
 
 ## 3. Update the help & documentation (whole codebase)
 
@@ -80,6 +92,19 @@ steps directly instead:
 ```
 
 Output: `dist\SoftMacro\`.
+
+**Fail-safe check** — the bundle must not report invalid modules (a broken
+source module produces a frozen app that crashes on launch with
+`ModuleNotFoundError`):
+
+```powershell
+$warn = Get-Content "build\SoftMacro\warn-SoftMacro.txt" -Raw
+if ($warn -match "invalid module named") {
+    $warn -split "`n" | Select-String "invalid module named"
+    throw "PyInstaller reported invalid modules - fix and rebuild before releasing."
+}
+"PyInstaller warnings OK"
+```
 
 ## 6. Build the installer (Inno Setup 6)
 
