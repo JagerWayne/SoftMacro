@@ -49,6 +49,8 @@ it is launched as a process. Requires Windows; `ctypes`/Win32 calls are core.
   `%APPDATA%\SoftMacro\softmacro.log`; diagnostics use `print`.
 - The `keyboard` lib's `add_hotkey(..., suppress=True)` never fires for a single
   non-modifier key; use `keyboard.hook_key` for lone keys (see `_register_action`
-  in `hotkey.py`). The overlay Esc watch in `register_overlay_escape` is
+  in `hotkey.py`), registered **unsuppressed** -- `hook_key(..., suppress=True)`
+  consumes the key system-wide at all times, making it unusable in other apps.
+  The overlay Esc watch in `register_overlay_escape` is
   deliberately **unsuppressed** so the focused overlay's own Tk `<Escape>` binding
   still receives the key; `Overlay.handle_escape` debounces the two paths.

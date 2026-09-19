@@ -87,7 +87,10 @@ def _register_action(combo: str, callback) -> Callable[[], None]:
 
     ``keyboard.add_hotkey(..., suppress=True)`` never fires when the hotkey
     is a single non-modifier key (e.g. the default ``pause``), so single
-    keys use ``hook_key``, which can block one key. Combos keep using
+    keys use ``hook_key``. Lone keys are registered **unsuppressed**: with
+    ``suppress=True`` the ``keyboard`` hook consumes the key system-wide at
+    all times, so binding an action to a common key (e.g. ``esc``) made that
+    key unusable in every other application. Combos keep using
     ``add_hotkey``. The returned remover hides the different teardown APIs
     (``remove_hotkey`` vs ``unhook``).
     """
@@ -95,12 +98,11 @@ def _register_action(combo: str, callback) -> Callable[[], None]:
         handle = keyboard.add_hotkey(combo, callback, suppress=True)
         return lambda: keyboard.remove_hotkey(handle)
 
-    def on_key(event) -> bool:
+    def on_key(event) -> None:
         if event.event_type == keyboard.KEY_DOWN:
             callback()
-        return False
 
-    handle = keyboard.hook_key(combo, on_key, suppress=True)
+    handle = keyboard.hook_key(combo, on_key, suppress=False)
     return lambda: keyboard.unhook(handle)
 
 
