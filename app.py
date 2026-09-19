@@ -73,10 +73,15 @@ class App:
         self.hotkey: HotkeyListener | None = None
         self.web_thread: threading.Thread | None = None
         self.tray: TrayIcon | None = None
+        self.splash = None
 
     # ---------------------------------------------------------------- boot
 
     def run(self) -> None:
+        # Show the splash first so there's something on screen while the
+        # web UI, hotkeys and tray come up.
+        self._show_splash()
+
         # Web UI (127.0.0.1, port configurable in Settings) on its own daemon thread.
         self.web_thread = web.start_in_thread()
 
@@ -101,6 +106,8 @@ class App:
         self.overlay.after(50, self._poll_queue)
 
         print("[SoftMacro] Ready. Press your hotkey in any application.")
+        # Keep the splash up just long enough to read, then fade it out.
+        self._finish_splash(after_ms=1300)
         try:
             self.overlay.mainloop()
         except KeyboardInterrupt:
@@ -109,7 +116,35 @@ class App:
             self._shutdown()
         sys.exit(0)
 
+    # --------------------------------------------------------------- splash
+
+    def _show_splash(self) -> None:
+        try:
+            from splash import Splash
+
+            self.splash = Splash(self.overlay.root)
+        except Exception as e:
+            print(f"[SoftMacro] splash screen failed: {e}")
+            self.splash = None
+
+    def _finish_splash(self, *, after_ms: int = 0) -> None:
+        if self.splash is not None:
+            try:
+                self.splash.finish(after_ms=after_ms)
+            except Exception as e:
+                print(f"[SoftMacro] splash finish failed: {e}")
+            self.splash = None
+
+    def _close_splash(self) -> None:
+        if self.splash is not None:
+            try:
+                self.splash.close()
+            except Exception:
+                pass
+            self.splash = None
+
     def _shutdown(self) -> None:
+        self._close_splash()
         try:
             if self.tray:
                 self.tray.stop()
@@ -210,6 +245,8 @@ class App:
     # --------------------------------------------------------- show/hide
 
     def _show_overlay(self) -> None:
+        # If the user opens the overlay during startup, drop the splash.
+        self._close_splash()
         hwnd, fg = window_info.foreground_window()
 
         # If the overlay itself (or something we can't identify) is in

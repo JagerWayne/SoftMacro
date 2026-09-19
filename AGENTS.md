@@ -28,6 +28,9 @@ it is launched as a process. Requires Windows; `ctypes`/Win32 calls are core.
   the Tk main thread). Effects are gated by `overlay.animations`, `overlay.animation_speed`
   and `overlay.reduce_motion`; every effect must have an instant fallback and must never
   delay focus restore or playback.
+- `splash.py` shows a frameless fade-in/out startup splash. Build it on the Tk main thread
+  from `App.run` before `mainloop`, and dismiss it when the overlay opens or the app shuts
+  down. It falls back to a plain window if Pillow is unavailable.
 - All overlay appearance (window mode/size/position, colours, font, spacing, motion) lives
   in the `overlay` block of `%APPDATA%\SoftMacro\config.json`. `config.DEFAULT_CONFIG`
   defines the keys, `web._parse_overlay_config` validates the whole form, and the

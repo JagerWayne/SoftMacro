@@ -20,6 +20,9 @@ The overlay only lists assigned letters. Press the letter on your keyboard
 (or click the row): the overlay hides, focus returns to the app you were in,
 and the macro plays there.
 
+When SoftMacro starts, a small splash window fades in with the product mark
+and version, then fades away once the web UI, hotkeys and tray are ready.
+
 ## Features
 
 - **Context-aware**: macros are stored per foreground executable
@@ -223,6 +226,7 @@ SoftMacro/
 ├── hotkey.py              # keyboard global hotkey
 ├── overlay.py             # tkinter floating playback window (nested groups)
 ├── anim.py                # main-thread tween engine for overlay animations
+├── splash.py              # startup splash window (fades in/out)
 ├── web.py                 # Flask management UI
 ├── event_parser.py        # Quick Add command language (source of truth)
 ├── events.txt             # Quick Add command reference (generated from event_parser.py)
