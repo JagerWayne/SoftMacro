@@ -284,8 +284,27 @@ def _parse_overlay_form(form) -> dict:
         alpha = 0.75
     if not (0.1 <= alpha <= 1.0):
         return {"config": {}, "error": "Transparency must be between 0.1 and 1.0."}
+    try:
+        animation_speed = float(form.get("overlay_animation_speed", "1.0"))
+    except (TypeError, ValueError):
+        animation_speed = 1.0
+    if not (0.25 <= animation_speed <= 3.0):
+        return {
+            "config": {},
+            "error": "Animation speed must be between 0.25 and 3.0.",
+        }
+    # Unchecked checkboxes are absent from the submitted form.
+    animations = form.get("overlay_animations") is not None
+    reduce_motion = form.get("overlay_reduce_motion") is not None
     return {
-        "config": {"border_px": border_px, "font_size": font_size, "alpha": alpha},
+        "config": {
+            "border_px": border_px,
+            "font_size": font_size,
+            "alpha": alpha,
+            "animations": animations,
+            "animation_speed": animation_speed,
+            "reduce_motion": reduce_motion,
+        },
         "error": None,
     }
 

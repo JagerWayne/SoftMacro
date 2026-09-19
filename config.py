@@ -31,6 +31,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "font_size":  18,
         # Window opacity (1.0 = opaque, 0.0 = invisible).
         "alpha":      0.75,
+        # Motion: master switch, duration multiplier and an accessibility
+        # override.
+        "animations":      True,
+        "animation_speed": 1.0,
+        "reduce_motion":   False,
     },
     "web": {
         # Port for the local management UI. The server always binds to

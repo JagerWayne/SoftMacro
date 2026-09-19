@@ -142,6 +142,12 @@ a:hover { color: var(--accent); }
   max-width: 1100px;
   margin: 0 auto;
   padding: 32px 24px 64px;
+  animation: page-enter 0.22s ease-out;
+}
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
 }
 
 .bottombar {
@@ -1127,6 +1133,17 @@ kbd {
   border-radius: var(--radius-sm);
   font-size: 13px;
   border: 1px solid;
+  animation: flash-enter 0.2s ease-out;
+}
+
+@keyframes flash-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .container,
+  .flash { animation: none; }
 }
 .flash.error {
   background: var(--danger-soft);
@@ -1498,6 +1515,14 @@ button.key-chip.combo {
 .settings-toggle-text small {
   color: var(--text-dim);
   font-size: 11px;
+}
+
+/* Stacked toggles below a settings grid (overlay motion options). */
+.settings-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 /* ------------------------------------------------------------------ */

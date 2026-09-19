@@ -24,6 +24,10 @@ it is launched as a process. Requires Windows; `ctypes`/Win32 calls are core.
   independent, so a macro can back several keys.
 - `window_info.py` captures the foreground HWND when the overlay opens; playback restores
   focus to it before replaying. Keep this contract when changing overlay/playback flow.
+- Overlay motion is driven by `anim.py` (a small tween engine scheduling `after` frames on
+  the Tk main thread). Effects are gated by `overlay.animations`, `overlay.animation_speed`
+  and `overlay.reduce_motion`; every effect must have an instant fallback and must never
+  delay focus restore or playback.
 
 ## Repo-specific conventions
 

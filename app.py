@@ -70,6 +70,9 @@ class App:
             border_px=overlay_cfg["border_px"],
             font_size=overlay_cfg["font_size"],
             alpha=overlay_cfg["alpha"],
+            animations=overlay_cfg["animations"],
+            animation_speed=overlay_cfg["animation_speed"],
+            reduce_motion=overlay_cfg["reduce_motion"],
         )
 
         self.hotkey: HotkeyListener | None = None
@@ -236,12 +239,6 @@ class App:
             macros=macros_by_id,
             groups=groups,
         )
-        self.overlay.update_state(
-            slots=self.current_app.get("slots", {}),
-            macros=macros_by_id,
-            groups=groups,
-            status="",
-        )
         # Capture Esc globally while the overlay is visible so it closes
         # even if the window didn't get keyboard focus.
         register_overlay_escape(self.queue)
@@ -259,6 +256,9 @@ class App:
             border_px=cfg.get("border_px"),
             font_size=cfg.get("font_size"),
             alpha=cfg.get("alpha"),
+            animations=cfg.get("animations"),
+            animation_speed=cfg.get("animation_speed"),
+            reduce_motion=cfg.get("reduce_motion"),
         )
 
     # --------------------------------------------------------------- play

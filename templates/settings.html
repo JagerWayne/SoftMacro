@@ -107,6 +107,37 @@
                value="{{ config.overlay.alpha }}">
         <span class="hint">1.0 is fully solid, 0.1 is nearly invisible. 0.7–0.85 reads well.</span>
       </div>
+
+      <div class="field">
+        <label for="overlay_animation_speed">
+          Animation speed
+          <span class="field-unit">0.25 – 3.0</span>
+        </label>
+        <input type="number" name="overlay_animation_speed" id="overlay_animation_speed"
+               class="input" min="0.25" max="3.0" step="0.25"
+               value="{{ config.overlay.animation_speed }}">
+        <span class="hint">Scales the fade/reveal/feedback durations. 1.0 is the default; higher is snappier.</span>
+      </div>
+    </div>
+
+    <div class="settings-toggles">
+      <label class="settings-toggle">
+        <input type="checkbox" name="overlay_animations"
+               {% if config.overlay.animations %}checked{% endif %}>
+        <span class="settings-toggle-text">
+          <strong>Enable animations</strong>
+          <small>Fade in/out, row reveals, press feedback and smooth hover on the overlay.</small>
+        </span>
+      </label>
+
+      <label class="settings-toggle">
+        <input type="checkbox" name="overlay_reduce_motion"
+               {% if config.overlay.reduce_motion %}checked{% endif %}>
+        <span class="settings-toggle-text">
+          <strong>Reduce motion</strong>
+          <small>Keep everything instant. Useful if motion is distracting or on slow machines.</small>
+        </span>
+      </label>
     </div>
   </section>
 
