@@ -1525,6 +1525,27 @@ button.key-chip.combo {
   margin-top: 16px;
 }
 
+/* Overlay Appearance page: expert mode + geometry visibility. */
+.expert-toggle { margin-bottom: 18px; }
+.expert-only { display: none !important; }
+body.expert-mode .expert-only { display: flex !important; }
+
+.geom-custom { display: none !important; }
+body.geom-custom .geom-custom { display: flex !important; }
+body.geom-custom .geom-fullscreen { display: none !important; }
+
+.color-input {
+  width: 100%;
+  height: 42px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.color-input::-webkit-color-swatch-wrapper { padding: 0; }
+.color-input::-webkit-color-swatch { border: none; border-radius: 6px; }
+
 /* ------------------------------------------------------------------ */
 /*  Event editor (new_macro.html)                                      */
 /* ------------------------------------------------------------------ */
@@ -1807,6 +1828,8 @@ button.key-chip.combo {
   font-size: 13px;
   line-height: 1.6;
 }
+
+.help-note-inline { color: var(--text-dim); font-weight: 400; }
 
 .help-table-wrap { overflow-x: auto; margin: 10px 0; }
 .help-table-wrap .table { font-size: 12.5px; }

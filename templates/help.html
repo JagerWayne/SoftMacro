@@ -23,6 +23,7 @@
   <a href="#builder">Command builder</a>
   <a href="#groups">Groups (nested)</a>
   <a href="#settings">Settings</a>
+  <a href="#appearance">Overlay appearance</a>
   <a href="#tray">Tray menu</a>
   <a href="#data">Data &amp; backups</a>
   <a href="#security">Security</a>
@@ -92,9 +93,10 @@
   <h2>The overlay (macro keyboard)</h2>
   <p>
     The overlay is a frameless, semi-transparent window that covers the
-    screen. It lists only the keys that are actually assigned for the
-    foreground application, in keyboard order (letters, then F-keys, then
-    numpad).
+    screen by default — or a custom floating panel if you set a size and
+    position on the <a href="#appearance">Overlay appearance</a> page. It
+    lists only the keys that are actually assigned for the foreground
+    application, in keyboard order (letters, then F-keys, then numpad).
   </p>
   <div class="help-table-wrap">
     <table class="table">
@@ -119,6 +121,11 @@
     If the overlay is empty, no macros are assigned to the application that
     had focus when you pressed the hotkey. The title bar always shows which
     app the overlay is for, so you can tell.
+  </p>
+  <p>
+    The overlay animates as it opens and navigates — rows fade in and key
+    presses flash. Tune the speed or turn motion off under
+    <a href="#appearance">Overlay appearance → Motion</a>.
   </p>
 </section>
 
@@ -566,15 +573,52 @@ Release shift       release the held Shift</pre>
       <tbody>
         <tr><td rowspan="2">Hotkeys</td><td>Show macro keyboard</td><td>Global toggle for the overlay.</td></tr>
         <tr><td>Stop playback</td><td>Cancels a running macro.</td></tr>
-        <tr><td rowspan="3">Overlay appearance</td><td>Border</td><td>Empty space around the overlay, in pixels. <code>0</code> fills the screen.</td></tr>
-        <tr><td>Font size</td><td>Base size of the overlay text.</td></tr>
-        <tr><td>Transparency</td><td><code>1.0</code> solid, <code>0.1</code> nearly invisible.</td></tr>
+        <tr><td>Overlay appearance</td><td>Own page</td><td>Window size/position, colours, fonts, spacing and motion — see <a href="#appearance">Overlay appearance</a>.</td></tr>
         <tr><td>Web UI</td><td>Port</td><td>Where the management UI is served (1024–65535). Changing it briefly restarts the web server and redirects you.</td></tr>
         <tr><td>Updates</td><td>Check / Install</td><td>Looks for a newer version on GitHub, installs it and offers to restart SoftMacro.</td></tr>
         <tr><td>Windows startup</td><td>Start automatically</td><td>Runs SoftMacro silently at login via the registry Run key.</td></tr>
       </tbody>
     </table>
   </div>
+</section>
+
+<!-- ============================================================= APPEARANCE -->
+<section class="help-section" id="appearance">
+  <h2>Overlay appearance</h2>
+  <p>
+    The overlay's look is edited on its own page:
+    <a href="{{ url_for('overlay_settings') }}">Overlay Appearance</a> (also
+    linked from the Settings page). Changes apply <strong>live</strong> — open
+    the overlay with your hotkey and tweak it as you go.
+  </p>
+  <p>
+    An <strong>Expert mode</strong> switch at the top reveals the advanced
+    colour, spacing and font options. Your choice is remembered in the browser.
+  </p>
+  <div class="help-table-wrap">
+    <table class="table">
+      <thead><tr><th>Group</th><th>Setting</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>Window</td><td>Position mode</td><td><em>Fullscreen</em> fills the screen minus the border; <em>Custom size &amp; position</em> turns the overlay into a floating panel using the X/Y/width/height values.</td></tr>
+        <tr><td>Window</td><td>Border</td><td>Empty space around the overlay in fullscreen mode, in pixels. <code>0</code> fills the screen.</td></tr>
+        <tr><td>Window</td><td>X / Y / Width / Height</td><td>Exact position (from the top-left of the screen) and size in pixels, used when Position mode is <em>Custom</em>.</td></tr>
+        <tr><td>Window</td><td>Transparency</td><td><code>1.0</code> solid, <code>0.1</code> nearly invisible. <code>0.7–0.85</code> reads well.</td></tr>
+        <tr><td>Text</td><td>Font size</td><td>Base size of the overlay text; the title and labels scale with it.</td></tr>
+        <tr><td>Text <span class="help-note-inline">(expert)</span></td><td>Font family</td><td>Any font installed on Windows, e.g. Segoe UI, Consolas, Bahnschrift.</td></tr>
+        <tr><td>Colours</td><td>Background</td><td>Window and row background.</td></tr>
+        <tr><td>Colours <span class="help-note-inline">(expert)</span></td><td>Text, muted, dim, accent, hover, press</td><td>Macro/group names, subtitle and status text, dashes and counts, the title/default letters, the row hover colour, and the brief key-press flash.</td></tr>
+        <tr><td>Layout <span class="help-note-inline">(expert)</span></td><td>Row spacing</td><td>Vertical gap between rows.</td></tr>
+        <tr><td>Layout <span class="help-note-inline">(expert)</span></td><td>Group indent</td><td>How far rows are indented when you are inside a group.</td></tr>
+        <tr><td>Motion</td><td>Enable animations</td><td>Turns the fade, row reveal, press feedback and hover transitions on or off.</td></tr>
+        <tr><td>Motion</td><td>Animation speed</td><td>Scales every duration: <code>0.25</code> slow, <code>1.0</code> default, <code>3.0</code> snappy.</td></tr>
+        <tr><td>Motion</td><td>Reduce motion</td><td>Keeps everything instant; useful if motion is distracting or on slow machines.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="help-note">
+    These settings live in the <code>overlay</code> block of
+    <code>%APPDATA%\SoftMacro\config.json</code> and are included in backups.
+  </p>
 </section>
 
 <!-- =================================================================== TRAY -->

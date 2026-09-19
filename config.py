@@ -25,12 +25,30 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "stop_playback":   "pause",
     },
     "overlay": {
-        # Margins around the fullscreen overlay (pixels).
-        "border_px":  20,
-        # Base font size for row labels.
-        "font_size":  18,
+        # Window geometry. ``window_mode`` is "fullscreen" (fill the screen
+        # minus ``border_px``) or "custom" (use x/y/width/height).
+        "window_mode":  "fullscreen",
+        "border_px":    20,
+        "x":            0,
+        "y":            0,
+        "width":        1280,
+        "height":       720,
+        # Base font size for row labels and the label font family.
+        "font_size":    18,
+        "font_family":  "Segoe UI",
         # Window opacity (1.0 = opaque, 0.0 = invisible).
-        "alpha":      0.75,
+        "alpha":        0.75,
+        # Colours (``#rrggbb``).
+        "bg":           "#6a6a6a",
+        "fg":           "#ffffff",
+        "fg_muted":     "#c8c8c8",
+        "fg_dim":       "#a0a0a8",
+        "accent":       "#ffffff",
+        "hover_bg":     "#7a7a7a",
+        "press_bg":     "#8f8f8f",
+        # Layout: vertical gap between rows and indentation inside a group.
+        "row_padding":  18,
+        "group_indent": 32,
         # Motion: master switch, duration multiplier and an accessibility
         # override.
         "animations":      True,

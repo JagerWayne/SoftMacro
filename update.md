@@ -30,7 +30,31 @@ Let `V` be the version (e.g. `1.3.0`) and tag it `v{V}`.
 
 Fix anything broken before continuing.
 
-## 3. Commit and push the source
+## 3. Update the help & documentation (whole codebase)
+
+Any user-visible change must be reflected in the docs **before committing**:
+
+- `templates/help.html` — the in-app user guide. Update the Settings reference,
+  the Overlay sections, feature descriptions and the "Data & backups" notes
+  whenever behaviour, settings, pages or key names change. Keep the TOC anchors
+  in sync with the section `id`s.
+- `templates/_key_reference.html` / `static/key_reference.js` — only if the set
+  of supported keys or the picker behaviour changed.
+- `events.txt` — regenerate when Quick Add commands changed (single source of
+  truth is `event_parser.py`):
+  `.\venv\Scripts\python.exe event_parser.py events.txt`
+- `README.md` — features list, usage steps, file-layout tree and
+  troubleshooting.
+- `AGENTS.md` — architecture / conventions if the change affects them.
+- `web.py` module docstring — the endpoint list, if a route was added/removed.
+
+Search for stale references to anything renamed or moved:
+
+```powershell
+rg -n "old name|/old/route" --glob "!venv/**" --glob "!dist/**"
+```
+
+## 4. Commit and push the source
 
 Inspect first, then commit only intended files (never commit `dist/` or user
 data in `%APPDATA%\SoftMacro`):
@@ -46,7 +70,7 @@ git push origin main
 Match the repo's commit style: descriptive sentence, often ending with
 `; bump version to X.Y.Z`.
 
-## 4. Build the application bundle (PyInstaller)
+## 5. Build the application bundle (PyInstaller)
 
 `build_installer.bat` ends with `pause`, which blocks automation — run the
 steps directly instead:
@@ -57,7 +81,7 @@ steps directly instead:
 
 Output: `dist\SoftMacro\`.
 
-## 5. Build the installer (Inno Setup 6)
+## 6. Build the installer (Inno Setup 6)
 
 Find `ISCC.exe` (first match wins):
 
@@ -84,7 +108,7 @@ $f = Get-Item "dist\installer\SoftMacroSetup.exe"
 
 `version:` must equal `{V}`. If not, the `VERSION` bump was missed.
 
-## 6. Tag and publish the GitHub release
+## 7. Tag and publish the GitHub release
 
 Annotated tag, matching existing style (`SoftMacro 1.2.0`):
 
@@ -120,6 +144,8 @@ Report the release URL back to the user.
 - [ ] Version decided (`{V}`)
 - [ ] `VERSION` and `branding.APP_VERSION` set to `{V}`
 - [ ] `py_compile` passes
+- [ ] Help/docs updated (`templates/help.html`, `README.md`, `events.txt`,
+      `AGENTS.md`, `web.py` docstring) — see step 3
 - [ ] Committed and pushed to `main`
 - [ ] PyInstaller bundle built in `dist\SoftMacro\`
 - [ ] `SoftMacroSetup.exe` built and `ProductVersion == {V}`
@@ -129,6 +155,8 @@ Report the release URL back to the user.
 ## Reminders
 
 - Bump the version in **both** `VERSION` and `branding.APP_VERSION`.
+- Keep the help/documentation in sync as part of every release (step 3) — the
+  in-app Help page is the user's manual.
 - Never commit `dist/`, `build/`, or `venv/`.
 - Never touch `%APPDATA%\SoftMacro\` (user apps, config, backups).
 - The updater compares `VERSION`; the release must tag that exact version and

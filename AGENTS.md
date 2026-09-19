@@ -28,6 +28,12 @@ it is launched as a process. Requires Windows; `ctypes`/Win32 calls are core.
   the Tk main thread). Effects are gated by `overlay.animations`, `overlay.animation_speed`
   and `overlay.reduce_motion`; every effect must have an instant fallback and must never
   delay focus restore or playback.
+- All overlay appearance (window mode/size/position, colours, font, spacing, motion) lives
+  in the `overlay` block of `%APPDATA%\SoftMacro\config.json`. `config.DEFAULT_CONFIG`
+  defines the keys, `web._parse_overlay_config` validates the whole form, and the
+  `/overlay` page ("Overlay Appearance", with an Expert-mode toggle) edits it. The App
+  passes the whole dict to `Overlay(settings=...)` and live-updates it via the
+  `apply_overlay_settings` event -> `Overlay.apply_settings(dict)`.
 
 ## Repo-specific conventions
 

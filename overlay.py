@@ -29,6 +29,7 @@ a configurable border.
 from __future__ import annotations
 
 import math
+import re
 import time
 import tkinter as tk
 from typing import Callable
@@ -36,17 +37,8 @@ from typing import Callable
 from anim import Animator, ease_out_cubic, lerp, lerp_color
 from storage import FKEYS, NUMPAD, LETTERS, SLOT_KEYS, slot_label
 from branding import APP_TITLE
+import config
 import window_info
-
-BG          = "#6a6a6a"   # window background
-FG          = "#ffffff"
-FG_MUTED    = "#c8c8c8"
-FG_DIM      = "#a0a0a8"
-ACCENT      = "#ffffff"
-HOVER_BG    = "#7a7a7a"
-PRESS_BG    = "#8f8f8f"   # brief flash when a key is activated
-ROW_PADDING = 18          # vertical spacing between rows
-GROUP_INDENT_PX = 32     # indent for macro rows inside a group view
 
 # Motion timings (milliseconds before the speed multiplier is applied).
 OPEN_MS      = 170        # overlay fade/zoom in
@@ -57,6 +49,27 @@ HOVER_MS     = 110        # background tween on hover
 PRESS_MS     = 170        # key-press flash
 STATUS_MS    = 220        # status/toast fade-in
 
+_HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _to_int(value, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_float(value, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_color(value, default: str) -> str:
+    text = str(value or "").strip()
+    return text.lower() if _HEX_RE.match(text) else default
+
 
 class Overlay:
     """Owns the hidden ``Tk`` root and a visible ``Toplevel`` window."""
@@ -66,21 +79,14 @@ class Overlay:
         on_play: Callable[[str], None],
         on_close: Callable[[], None],
         *,
-        border_px: int = 20,
-        font_size: int = 18,
-        alpha: float = 0.75,
-        animations: bool = True,
-        animation_speed: float = 1.0,
-        reduce_motion: bool = False,
+        settings: dict | None = None,
     ) -> None:
         self.on_play = on_play
         self.on_close = on_close
-        self.border_px = int(border_px)
-        self.font_size = int(font_size)
-        self.alpha = float(alpha)
-        self._animations_enabled = bool(animations)
-        self._animation_speed = float(animation_speed) or 1.0
-        self._reduce_motion = bool(reduce_motion)
+
+        # Start from the built-in defaults, then layer user settings on top.
+        self._set_defaults()
+        self._apply_keys(settings or {})
 
         # Navigation stack of open group ids; empty = top level. Groups can
         # nest, so this is the path Main -> group -> sub-group -> ...
@@ -112,7 +118,7 @@ class Overlay:
         self.win.attributes("-topmost", True)
         self.win.attributes("-alpha", self.alpha)
         self.win.overrideredirect(True)
-        self.win.configure(bg=BG)
+        self.win.configure(bg=self.bg)
         self.win.bind("<Escape>", lambda _e: self.handle_escape())
         self.win.withdraw()
 
@@ -130,11 +136,119 @@ class Overlay:
 
         self._build_ui()
 
+    # ---------------------------------------------------------- settings
+
+    def _set_defaults(self) -> None:
+        d = config.DEFAULT_CONFIG["overlay"]
+        self.window_mode = str(d["window_mode"])
+        self.border_px = int(d["border_px"])
+        self.pos_x = int(d["x"])
+        self.pos_y = int(d["y"])
+        self.window_width = int(d["width"])
+        self.window_height = int(d["height"])
+        self.font_size = int(d["font_size"])
+        self.font_family = str(d["font_family"])
+        self.alpha = float(d["alpha"])
+        self.bg = str(d["bg"])
+        self.fg = str(d["fg"])
+        self.fg_muted = str(d["fg_muted"])
+        self.fg_dim = str(d["fg_dim"])
+        self.accent = str(d["accent"])
+        self.hover_bg = str(d["hover_bg"])
+        self.press_bg = str(d["press_bg"])
+        self.row_padding = int(d["row_padding"])
+        self.group_indent = int(d["group_indent"])
+        self._animations_enabled = bool(d["animations"])
+        self._animation_speed = float(d["animation_speed"]) or 1.0
+        self._reduce_motion = bool(d["reduce_motion"])
+
+    def _apply_keys(self, changes: dict) -> None:
+        """Update only the settings present in ``changes``."""
+        c = changes or {}
+        if "window_mode" in c and c["window_mode"] in ("fullscreen", "custom"):
+            self.window_mode = c["window_mode"]
+        if "border_px" in c:
+            self.border_px = max(0, min(1000, _to_int(c["border_px"], self.border_px)))
+        if "x" in c:
+            self.pos_x = max(-20000, min(20000, _to_int(c["x"], self.pos_x)))
+        if "y" in c:
+            self.pos_y = max(-20000, min(20000, _to_int(c["y"], self.pos_y)))
+        if "width" in c:
+            self.window_width = max(200, min(20000, _to_int(c["width"], self.window_width)))
+        if "height" in c:
+            self.window_height = max(150, min(20000, _to_int(c["height"], self.window_height)))
+        if "font_size" in c:
+            self.font_size = max(8, min(96, _to_int(c["font_size"], self.font_size)))
+        if "font_family" in c:
+            family = str(c["font_family"] or "").strip()
+            self.font_family = family[:64] or self.font_family
+        if "alpha" in c:
+            self.alpha = min(1.0, max(0.1, _to_float(c["alpha"], self.alpha)))
+        if "bg" in c:
+            self.bg = _to_color(c["bg"], self.bg)
+        if "fg" in c:
+            self.fg = _to_color(c["fg"], self.fg)
+        if "fg_muted" in c:
+            self.fg_muted = _to_color(c["fg_muted"], self.fg_muted)
+        if "fg_dim" in c:
+            self.fg_dim = _to_color(c["fg_dim"], self.fg_dim)
+        if "accent" in c:
+            self.accent = _to_color(c["accent"], self.accent)
+        if "hover_bg" in c:
+            self.hover_bg = _to_color(c["hover_bg"], self.hover_bg)
+        if "press_bg" in c:
+            self.press_bg = _to_color(c["press_bg"], self.press_bg)
+        if "row_padding" in c:
+            self.row_padding = max(0, min(120, _to_int(c["row_padding"], self.row_padding)))
+        if "group_indent" in c:
+            self.group_indent = max(0, min(800, _to_int(c["group_indent"], self.group_indent)))
+        if "animations" in c:
+            self._animations_enabled = bool(c["animations"])
+        if "animation_speed" in c:
+            self._animation_speed = max(
+                0.25, min(3.0, _to_float(c["animation_speed"], self._animation_speed))
+            )
+        if "reduce_motion" in c:
+            self._reduce_motion = bool(c["reduce_motion"])
+
+    def apply_settings(self, changes: dict) -> None:
+        """Merge ``changes`` into the current settings and apply them live."""
+        self._apply_keys(changes or {})
+        # A settings change should not be mid-tween; settle immediately.
+        self.animator.cancel("window")
+        if not self._motion:
+            self.animator.cancel_all()
+        self._apply_appearance()
+        try:
+            if self.win.winfo_viewable():
+                self._set_geometry(*self._target_rect())
+                self.win.attributes("-alpha", self.alpha)
+        except tk.TclError:
+            pass
+        try:
+            self._refresh_rows()
+        except tk.TclError:
+            pass
+
+    def _apply_appearance(self) -> None:
+        """Repaint the always-visible widgets after a colour/font change."""
+        try:
+            self.win.configure(bg=self.bg)
+            self.rows_frame.configure(bg=self.bg)
+            self.title_label.configure(
+                bg=self.bg, fg=self.accent, font=self._font(delta=12, bold=True)
+            )
+            self.subtitle_label.configure(bg=self.bg, font=self._font(delta=2))
+            self.status_label.configure(bg=self.bg, font=self._font(delta=-4))
+        except tk.TclError:
+            return
+        self._refresh_title_only()
+
     # ---------------------------------------------------------------- ui
 
     def _font(self, delta: int = 0, bold: bool = False) -> tuple:
         size = max(self.font_size + delta, 10)
-        return ("Segoe UI", size, "bold" if bold else "normal")
+        return (self.font_family, size, "bold" if bold else "normal")
 
     def _build_ui(self) -> None:
         # Title (app name) and subtitle (group context when inside one).
@@ -142,8 +256,8 @@ class Overlay:
             self.win,
             text=APP_TITLE,
             font=self._font(delta=12, bold=True),
-            fg=ACCENT,
-            bg=BG,
+            fg=self.accent,
+            bg=self.bg,
             anchor="w",
         )
         self.title_label.pack(fill="x", padx=24, pady=(22, 2))
@@ -152,14 +266,14 @@ class Overlay:
             self.win,
             text="",
             font=self._font(delta=2),
-            fg=FG_MUTED,
-            bg=BG,
+            fg=self.fg_muted,
+            bg=self.bg,
             anchor="w",
         )
         self.subtitle_label.pack(fill="x", padx=24, pady=(0, 4))
 
         # Rows area -- one row per visible entry.
-        self.rows_frame = tk.Frame(self.win, bg=BG)
+        self.rows_frame = tk.Frame(self.win, bg=self.bg)
         self.rows_frame.pack(fill="both", expand=True, padx=24, pady=(8, 14))
 
         # Status / hint line.
@@ -168,8 +282,8 @@ class Overlay:
             self.win,
             textvariable=self.status_var,
             font=self._font(delta=-4),
-            fg=FG_MUTED,
-            bg=BG,
+            fg=self.fg_muted,
+            bg=self.bg,
             anchor="w",
         )
         self.status_label.pack(fill="x", padx=24, pady=(0, 20))
@@ -193,71 +307,21 @@ class Overlay:
         if not text or not animate or not self._motion:
             self.animator.cancel("status")
             try:
-                self.status_label.configure(fg=FG_MUTED)
+                self.status_label.configure(fg=self.fg_muted)
             except tk.TclError:
                 pass
             return
         try:
-            self.status_label.configure(fg=BG)
+            self.status_label.configure(fg=self.bg)
         except tk.TclError:
             return
         self.animator.run(
             self._scaled(STATUS_MS),
             lambda e: self.status_label.configure(
-                fg=lerp_color(BG, FG_MUTED, e)
+                fg=lerp_color(self.bg, self.fg_muted, e)
             ),
             key="status",
         )
-
-    def apply_settings(
-        self,
-        *,
-        border_px: int | None = None,
-        font_size: int | None = None,
-        alpha: float | None = None,
-        animations: bool | None = None,
-        animation_speed: float | None = None,
-        reduce_motion: bool | None = None,
-    ) -> None:
-        """Update overlay appearance. Geometry re-applies on next ``show()``."""
-        if border_px is not None:
-            self.border_px = int(border_px)
-        if font_size is not None:
-            self.font_size = int(font_size)
-        if animations is not None:
-            self._animations_enabled = bool(animations)
-        if animation_speed is not None:
-            self._animation_speed = float(animation_speed) or 1.0
-        if reduce_motion is not None:
-            self._reduce_motion = bool(reduce_motion)
-        if alpha is not None:
-            self.alpha = float(alpha)
-            if not self._motion:
-                try:
-                    self.win.attributes("-alpha", self.alpha)
-                except tk.TclError:
-                    pass
-        # A settings change drops any running motion; snap to a settled state.
-        if not self._motion:
-            self.animator.cancel_all()
-            try:
-                if self.win.winfo_viewable():
-                    self._set_geometry(*self._screen_rect())
-                    self.win.attributes("-alpha", self.alpha)
-            except tk.TclError:
-                pass
-        # Live-update fonts on the always-visible widgets.
-        try:
-            self.title_label.configure(font=self._font(delta=12, bold=True))
-            self.subtitle_label.configure(font=self._font(delta=2))
-            self.status_label.configure(font=self._font(delta=-4))
-        except tk.TclError:
-            pass
-        # Re-render rows so they pick up the new font sizes.
-        try:
-            self._refresh_rows()
-        except tk.TclError:
-            pass
 
     # ------------------------------------------------------- countdown
 
@@ -279,14 +343,16 @@ class Overlay:
         win.withdraw()
         win.overrideredirect(True)
         win.attributes("-topmost", True)
-        win.configure(bg=BG)
+        win.configure(bg=self.bg)
 
         label = tk.Label(
-            win, text="", font=self._font(delta=10, bold=True), fg=ACCENT, bg=BG
+            win, text="", font=self._font(delta=10, bold=True),
+            fg=self.accent, bg=self.bg,
         )
         label.pack(padx=56, pady=(26, 4))
         hint = tk.Label(
-            win, text="Esc to cancel", font=self._font(delta=-4), fg=FG_MUTED, bg=BG
+            win, text="Esc to cancel", font=self._font(delta=-4),
+            fg=self.fg_muted, bg=self.bg,
         )
         hint.pack(pady=(0, 18))
 
@@ -378,7 +444,7 @@ class Overlay:
 
         self._refresh_title(app_name, app_exe)
 
-        fx, fy, fw, fh = self._screen_rect()
+        fx, fy, fw, fh = self._target_rect()
         if self._motion:
             # Start slightly inset and transparent, then ease to the target.
             ix, iy, iw, ih = self._inset_rect(fx, fy, fw, fh)
@@ -407,8 +473,15 @@ class Overlay:
 
     # -- geometry helpers ---------------------------------------------------
 
-    def _screen_rect(self) -> tuple[int, int, int, int]:
-        """Target rectangle ``(x, y, w, h)``: screen minus the border."""
+    def _target_rect(self) -> tuple[int, int, int, int]:
+        """Target rectangle ``(x, y, w, h)`` for the current geometry mode."""
+        if self.window_mode == "custom":
+            return (
+                self.pos_x,
+                self.pos_y,
+                max(200, self.window_width),
+                max(150, self.window_height),
+            )
         self.win.update_idletasks()
         sw = self.win.winfo_screenwidth()
         sh = self.win.winfo_screenheight()
@@ -565,28 +638,28 @@ class Overlay:
             )
             self.title_label.configure(
                 text=f"{name}",
-                fg=ACCENT,
+                fg=self.accent,
                 font=self._font(delta=12, bold=True),
             )
             self.subtitle_label.configure(
                 text=f"  ·  {trail}",
-                fg=current.get("color", FG_MUTED),
+                fg=current.get("color", self.fg_muted),
                 font=self._font(delta=2),
             )
         else:
             self.title_label.configure(
                 text=name if name else APP_TITLE,
-                fg=ACCENT,
+                fg=self.accent,
                 font=self._font(delta=12, bold=True),
             )
             if self.groups:
                 self.subtitle_label.configure(
                     text="Press a letter to open a group",
-                    fg=FG_MUTED,
+                    fg=self.fg_muted,
                     font=self._font(delta=0),
                 )
             else:
-                self.subtitle_label.configure(text="", fg=FG_MUTED)
+                self.subtitle_label.configure(text="", fg=self.fg_muted)
 
     def _refresh_rows(self) -> None:
         for child in self.rows_frame.winfo_children():
@@ -603,7 +676,7 @@ class Overlay:
 
     def _render_dir_rows(self) -> None:
         slots = self._current_slots()
-        indent = GROUP_INDENT_PX if self.stack else 0
+        indent = self.group_indent if self.stack else 0
         order = {key: i for i, key in enumerate(SLOT_KEYS)}
 
         rows: list[tk.Frame] = []
@@ -626,11 +699,11 @@ class Overlay:
                     row,
                     text=f"   ({count} item{'s' if count != 1 else ''})",
                     font=self._font(delta=-2),
-                    fg=FG_DIM,
-                    bg=BG,
+                    fg=self.fg_dim,
+                    bg=self.bg,
                 )
                 count_lbl.pack(side="left")
-                self._register_row_widget(row, count_lbl, fg=FG_DIM)
+                self._register_row_widget(row, count_lbl, fg=self.fg_dim)
             elif target in self.macros:
                 macro = self.macros[target]
                 row = self._make_row(
@@ -689,10 +762,10 @@ class Overlay:
     def _prepare_row_hidden(self, row: tk.Frame) -> None:
         for widget, _final in getattr(row, "_sm_fade", []):
             try:
-                widget.configure(fg=BG)
+                widget.configure(fg=self.bg)
             except tk.TclError:
                 pass
-        base = getattr(row, "_sm_base_pady", ROW_PADDING // 2)
+        base = getattr(row, "_sm_base_pady", self.row_padding // 2)
         try:
             row.pack_configure(pady=(base + 8, base))
         except tk.TclError:
@@ -700,12 +773,13 @@ class Overlay:
 
     def _animate_row_in(self, row: tk.Frame, duration: float) -> None:
         entries = getattr(row, "_sm_fade", [])
-        base = getattr(row, "_sm_base_pady", ROW_PADDING // 2)
+        base = getattr(row, "_sm_base_pady", self.row_padding // 2)
+        start_color = self.bg
 
         def frame(e: float) -> None:
             for widget, final in entries:
                 try:
-                    widget.configure(fg=lerp_color(BG, final, e))
+                    widget.configure(fg=lerp_color(start_color, final, e))
                 except tk.TclError:
                     pass
             try:
@@ -716,16 +790,16 @@ class Overlay:
         self.animator.run(duration, frame, key=("row", id(row)), easing=ease_out_cubic)
 
     def _on_row_enter(self, row: tk.Frame) -> None:
-        if getattr(row, "_sm_bg_target", BG) == HOVER_BG:
+        if getattr(row, "_sm_bg_target", self.bg) == self.hover_bg:
             return
-        row._sm_bg_target = HOVER_BG
-        self._tween_row_bg(row, HOVER_BG)
+        row._sm_bg_target = self.hover_bg
+        self._tween_row_bg(row, self.hover_bg)
 
     def _on_row_leave(self, row: tk.Frame) -> None:
-        if getattr(row, "_sm_bg_target", BG) == BG:
+        if getattr(row, "_sm_bg_target", self.bg) == self.bg:
             return
-        row._sm_bg_target = BG
-        self._tween_row_bg(row, BG)
+        row._sm_bg_target = self.bg
+        self._tween_row_bg(row, self.bg)
 
     def _tween_row_bg(self, row: tk.Frame, target: str) -> None:
         widgets = self._row_widgets(row)
@@ -734,7 +808,7 @@ class Overlay:
             try:
                 starts.append(w.cget("bg"))
             except tk.TclError:
-                starts.append(BG)
+                starts.append(self.bg)
         duration = self._scaled(HOVER_MS)
 
         def frame(e: float) -> None:
@@ -749,20 +823,20 @@ class Overlay:
     def _pulse_row(self, row: tk.Frame | None) -> None:
         if row is None or not self._motion:
             return
-        base = getattr(row, "_sm_bg_target", BG)
+        base = getattr(row, "_sm_bg_target", self.bg)
         widgets = self._row_widgets(row)
         # Flash immediately so it is visible even if the overlay hides next.
         self.animator.cancel(("bg", id(row)))
         for w in widgets:
             try:
-                w.configure(bg=PRESS_BG)
+                w.configure(bg=self.press_bg)
             except tk.TclError:
                 pass
 
         def frame(e: float) -> None:
             for w in widgets:
                 try:
-                    w.configure(bg=lerp_color(PRESS_BG, base, e))
+                    w.configure(bg=lerp_color(self.press_bg, base, e))
                 except tk.TclError:
                     pass
 
@@ -783,20 +857,20 @@ class Overlay:
     ) -> tk.Frame:
         row = tk.Frame(
             self.rows_frame,
-            bg=BG,
+            bg=self.bg,
             cursor=("hand2" if not click_disabled else "arrow"),
         )
-        row.pack(fill="x", pady=ROW_PADDING // 2, padx=(indent, 0))
-        row._sm_base_pady = ROW_PADDING // 2
-        row._sm_bg_target = BG
+        row.pack(fill="x", pady=self.row_padding // 2, padx=(indent, 0))
+        row._sm_base_pady = self.row_padding // 2
+        row._sm_bg_target = self.bg
 
-        label_color = color if color else ACCENT
+        label_color = color if color else self.accent
         letter_lbl = tk.Label(
             row,
             text=label,
             font=self._font(delta=4, bold=bold),
             fg=label_color,
-            bg=BG,
+            bg=self.bg,
         )
         letter_lbl.pack(side="left")
 
@@ -804,8 +878,8 @@ class Overlay:
             row,
             text="  —  ",
             font=self._font(delta=0),
-            fg=FG_DIM,
-            bg=BG,
+            fg=self.fg_dim,
+            bg=self.bg,
         )
         dash_lbl.pack(side="left")
 
@@ -813,16 +887,16 @@ class Overlay:
             row,
             text=name,
             font=self._font(delta=2, bold=bold),
-            fg=FG if bold else FG,
-            bg=BG,
+            fg=self.fg,
+            bg=self.bg,
         )
         name_lbl.pack(side="left")
 
         row._sm_bg_widgets = [row, letter_lbl, dash_lbl, name_lbl]
         row._sm_fade = [
             (letter_lbl, label_color),
-            (dash_lbl, FG_DIM),
-            (name_lbl, FG),
+            (dash_lbl, self.fg_dim),
+            (name_lbl, self.fg),
         ]
 
         # Click anywhere on the row to play/open (unless disabled).
@@ -839,15 +913,15 @@ class Overlay:
             self.rows_frame,
             text=message,
             font=self._font(delta=0),
-            fg=FG_DIM,
-            bg=BG,
+            fg=self.fg_dim,
+            bg=self.bg,
         )
-        lbl.pack(anchor="w", pady=ROW_PADDING)
+        lbl.pack(anchor="w", pady=self.row_padding)
         if self._motion:
-            lbl.configure(fg=BG)
+            lbl.configure(fg=self.bg)
             self.animator.run(
                 self._scaled(ROW_MS),
-                lambda e: lbl.configure(fg=lerp_color(BG, FG_DIM, e)),
+                lambda e: lbl.configure(fg=lerp_color(self.bg, self.fg_dim, e)),
                 key=("empty", id(lbl)),
             )
 

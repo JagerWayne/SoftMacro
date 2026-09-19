@@ -67,12 +67,7 @@ class App:
         self.overlay = Overlay(
             on_play=self._on_play,
             on_close=self._on_overlay_close,
-            border_px=overlay_cfg["border_px"],
-            font_size=overlay_cfg["font_size"],
-            alpha=overlay_cfg["alpha"],
-            animations=overlay_cfg["animations"],
-            animation_speed=overlay_cfg["animation_speed"],
-            reduce_motion=overlay_cfg["reduce_motion"],
+            settings=overlay_cfg,
         )
 
         self.hotkey: HotkeyListener | None = None
@@ -252,14 +247,7 @@ class App:
         unregister_overlay_escape()
 
     def _apply_overlay_settings(self, cfg: dict) -> None:
-        self.overlay.apply_settings(
-            border_px=cfg.get("border_px"),
-            font_size=cfg.get("font_size"),
-            alpha=cfg.get("alpha"),
-            animations=cfg.get("animations"),
-            animation_speed=cfg.get("animation_speed"),
-            reduce_motion=cfg.get("reduce_motion"),
-        )
+        self.overlay.apply_settings(cfg or {})
 
     # --------------------------------------------------------------- play
 

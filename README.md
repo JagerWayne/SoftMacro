@@ -38,6 +38,12 @@ and the macro plays there.
 - **Configurable hotkeys** (defaults: `Ctrl+Z` show, `Pause` stop playback):
   change them any time at <http://localhost:5000/settings> — they apply
   instantly, no restart.
+- **Customisable overlay look**: a dedicated
+  <http://localhost:5000/overlay> page controls full-screen vs. a fixed
+  floating panel (x/y/size), background and text colours, font family and
+  size, row spacing, and the open/navigation animations (with a speed
+  multiplier and a reduce-motion option). Changes apply live; an Expert-mode
+  toggle reveals the advanced colour and layout options.
 - **Running-app picker**: the New app page lists your open windows with
   friendly names (UWP apps resolved to their real exe) so you can add one
   with a click instead of typing the executable name.
@@ -180,8 +186,9 @@ that is playing. Both are configurable at
 ### Play macros (hotkey)
 
 1. Focus any application, press your hotkey (default **Ctrl + Z**).
-   A compact, 50%-transparent grey list pops up (white text, left-aligned)
-   showing only the assigned shortcuts, e.g. `Q = New Tab`.
+   An on-screen list pops up showing only the assigned shortcuts, e.g.
+   `Q = New Tab`. Its size, position, colours, font and motion are all set on
+   the <http://localhost:5000/overlay> page.
 2. Press a listed letter on the keyboard (or click its row). If the key
    opens a **group**, the overlay switches to that group's list (and the
    breadcrumb in the subtitle grows, e.g. `Tabs › Advanced`). Esc steps
@@ -215,6 +222,7 @@ SoftMacro/
 ├── player.py              # pynput playback with timing
 ├── hotkey.py              # keyboard global hotkey
 ├── overlay.py             # tkinter floating playback window (nested groups)
+├── anim.py                # main-thread tween engine for overlay animations
 ├── web.py                 # Flask management UI
 ├── event_parser.py        # Quick Add command language (source of truth)
 ├── events.txt             # Quick Add command reference (generated from event_parser.py)
@@ -229,7 +237,8 @@ SoftMacro/
 │   ├── app.html           # per-app macros, breadcrumb, groups + assignments
 │   ├── macro_form.html    # create / edit macro with Quick Add + command builder
 │   ├── _key_reference.html# shared key picker (chips + search)
-│   ├── settings.html      # hotkeys, overlay, web port, updates, autostart
+│   ├── settings.html      # hotkeys, web port, updates, autostart
+│   ├── overlay_settings.html # overlay window, colours, fonts, spacing, motion
 │   ├── help.html          # full user guide + key/command reference
 │   ├── restarting.html    # shown while SoftMacro restarts after an update
 │   └── 404.html

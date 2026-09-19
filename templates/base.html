@@ -25,6 +25,8 @@
       <nav class="topnav">
         <a href="{{ url_for('index') }}"
            class="topnav-link {% if request.endpoint == 'index' %}active{% endif %}">Apps</a>
+        <a href="{{ url_for('overlay_settings') }}"
+           class="topnav-link {% if request.endpoint == 'overlay_settings' %}active{% endif %}">Overlay</a>
         <a href="{{ url_for('help_page') }}"
            class="topnav-link {% if request.endpoint == 'help_page' %}active{% endif %}">Help</a>
         <a href="{{ url_for('settings') }}"

@@ -18,6 +18,8 @@ Endpoints:
     POST /app/<exe>/macro/<id>                save edits
     POST /app/<exe>/macro/<id>/delete         delete (and unassign)
     POST /app/<exe>/slot                      assign/unassign letter -> macro
+    GET  /overlay                             overlay appearance settings
+    POST /overlay                             save overlay appearance
     GET  /settings                            hotkey settings
     POST /settings                            save hotkeys
     POST /parse                               expand a Quick-Add command
@@ -27,6 +29,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import socket
 import threading
 from collections import deque
@@ -264,49 +267,93 @@ def _parse_playback_opts(form) -> tuple[int, float]:
     return repeat, speed
 
 
-def _parse_overlay_form(form) -> dict:
-    """Parse and clamp the overlay-appearance form fields."""
-    try:
-        border_px = int(form.get("overlay_border_px", "20"))
-    except (TypeError, ValueError):
-        border_px = 20
-    if not (0 <= border_px <= 400):
-        return {"config": {}, "error": "Border must be between 0 and 400 px."}
-    try:
-        font_size = int(form.get("overlay_font_size", "18"))
-    except (TypeError, ValueError):
-        font_size = 18
-    if not (10 <= font_size <= 64):
-        return {"config": {}, "error": "Font size must be between 10 and 64."}
-    try:
-        alpha = float(form.get("overlay_alpha", "0.75"))
-    except (TypeError, ValueError):
-        alpha = 0.75
-    if not (0.1 <= alpha <= 1.0):
-        return {"config": {}, "error": "Transparency must be between 0.1 and 1.0."}
-    try:
-        animation_speed = float(form.get("overlay_animation_speed", "1.0"))
-    except (TypeError, ValueError):
-        animation_speed = 1.0
-    if not (0.25 <= animation_speed <= 3.0):
-        return {
-            "config": {},
-            "error": "Animation speed must be between 0.25 and 3.0.",
-        }
+def _parse_overlay_config(form) -> dict:
+    """Parse and validate the full overlay-appearance form.
+
+    Returns ``{"config": {...}, "error": None}`` on success or an error
+    message when a field is out of range. The returned config contains every
+    key ``config.DEFAULT_CONFIG["overlay"]`` defines.
+    """
+
+    def as_int(name, default, lo, hi, label):
+        try:
+            value = int((form.get(name) or "").strip())
+        except (TypeError, ValueError):
+            value = default
+        if not (lo <= value <= hi):
+            return None, f"{label} must be between {lo} and {hi}."
+        return value, None
+
+    def as_float(name, default, lo, hi, label):
+        try:
+            value = float((form.get(name) or "").strip())
+        except (TypeError, ValueError):
+            value = default
+        if not (lo <= value <= hi):
+            return None, f"{label} must be between {lo} and {hi}."
+        return value, None
+
+    def as_color(name, default, label):
+        raw = (form.get(name) or "").strip()
+        if not raw:
+            return default, None
+        if not re.fullmatch(r"#[0-9a-fA-F]{6}", raw):
+            return None, f"{label} must be a hex colour like #6a6a6a."
+        return raw.lower(), None
+
+    cfg: dict = {}
+
+    mode = (form.get("window_mode") or "fullscreen").strip().lower()
+    cfg["window_mode"] = mode if mode in ("fullscreen", "custom") else "fullscreen"
+
+    numeric = (
+        ("border_px", 20, 0, 1000, "Border"),
+        ("x", 0, -20000, 20000, "X position"),
+        ("y", 0, -20000, 20000, "Y position"),
+        ("width", 1280, 200, 20000, "Width"),
+        ("height", 720, 150, 20000, "Height"),
+        ("font_size", 18, 8, 96, "Font size"),
+        ("row_padding", 18, 0, 120, "Row spacing"),
+        ("group_indent", 32, 0, 800, "Group indent"),
+    )
+    for name, default, lo, hi, label in numeric:
+        value, err = as_int(name, default, lo, hi, label)
+        if err:
+            return {"config": {}, "error": err}
+        cfg[name] = value
+
+    speed, err = as_float("animation_speed", 1.0, 0.25, 3.0, "Animation speed")
+    if err:
+        return {"config": {}, "error": err}
+    cfg["animation_speed"] = speed
+
+    alpha, err = as_float("alpha", 0.75, 0.1, 1.0, "Transparency")
+    if err:
+        return {"config": {}, "error": err}
+    cfg["alpha"] = alpha
+
+    colors = (
+        ("bg", "#6a6a6a", "Background colour"),
+        ("fg", "#ffffff", "Text colour"),
+        ("fg_muted", "#c8c8c8", "Muted text colour"),
+        ("fg_dim", "#a0a0a8", "Dim text colour"),
+        ("accent", "#ffffff", "Accent colour"),
+        ("hover_bg", "#7a7a7a", "Hover background"),
+        ("press_bg", "#8f8f8f", "Press flash colour"),
+    )
+    for name, default, label in colors:
+        value, err = as_color(name, default, label)
+        if err:
+            return {"config": {}, "error": err}
+        cfg[name] = value
+
+    family = (form.get("font_family") or "").strip()[:64]
+    cfg["font_family"] = family or "Segoe UI"
+
     # Unchecked checkboxes are absent from the submitted form.
-    animations = form.get("overlay_animations") is not None
-    reduce_motion = form.get("overlay_reduce_motion") is not None
-    return {
-        "config": {
-            "border_px": border_px,
-            "font_size": font_size,
-            "alpha": alpha,
-            "animations": animations,
-            "animation_speed": animation_speed,
-            "reduce_motion": reduce_motion,
-        },
-        "error": None,
-    }
+    cfg["animations"] = form.get("animations") is not None
+    cfg["reduce_motion"] = form.get("reduce_motion") is not None
+    return {"config": cfg, "error": None}
 
 
 def _parse_web_port(form, current: int) -> tuple[int | None, str | None]:
@@ -801,21 +848,15 @@ def create_app() -> Flask:
                 if len(set(combos)) != len(combos):
                     error = "Hotkeys must all be different."
                 else:
-                    overlay = _parse_overlay_form(request.form)
                     current_port = config.get_web_port()
                     web_port, web_err = _parse_web_port(request.form, current_port)
                     if web_err:
                         error = web_err
-                    elif overlay.get("error"):
-                        error = overlay["error"]
                     else:
                         cfg["hotkeys"].update(normalized)
-                        cfg["overlay"] = overlay["config"]
                         cfg["web"] = {"port": web_port}
                         config.save_config(cfg)
                         applied = config.reload_hotkeys()
-                        # Push live overlay setting change to the App.
-                        runtime.post(("apply_overlay_settings", overlay["config"]))
                         if web_port != current_port:
                             restart_in_thread(web_port)
                             port_changed = web_port
@@ -835,6 +876,33 @@ def create_app() -> Flask:
             restore=_restore_state,
             app_version=branding.APP_VERSION,
             autostart_enabled=autostart.is_enabled(),
+        )
+
+    # ============================================================ overlay
+
+    @app.route("/overlay", methods=["GET", "POST"])
+    def overlay_settings():
+        cfg = config.load_config()
+        saved = False
+        error: str | None = None
+
+        if request.method == "POST":
+            parsed = _parse_overlay_config(request.form)
+            if parsed.get("error"):
+                error = parsed["error"]
+            else:
+                cfg["overlay"] = parsed["config"]
+                config.save_config(cfg)
+                # Push the change to the running overlay (live preview).
+                runtime.post(("apply_overlay_settings", parsed["config"]))
+                saved = True
+
+        return render_template(
+            "overlay_settings.html",
+            config=cfg,
+            saved=saved,
+            error=error,
+            app_version=branding.APP_VERSION,
         )
 
     # ========================================================= autostart
