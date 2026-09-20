@@ -6,8 +6,8 @@
     <a href="{{ url_for('view_app', exe=exe) }}" class="back">&larr; {{ app.display_name }}</a>
     <h1>{{ form_title }}</h1>
     <p class="sub">
-      Give the macro a name and define its events. You'll assign it to a
-      letter afterwards from the app page.
+      Build the macro from simple commands. Assign it to a key afterwards on the
+      <strong>{{ app.display_name }}</strong> page.
     </p>
   </div>
 </div>
@@ -16,205 +16,257 @@
 <div class="flash error">{{ error }}</div>
 {% endif %}
 
-<form method="POST" class="form" action="{{ form_action }}" id="macro-form">
-  <div class="field" style="max-width: 480px;">
-    <label for="name">Name</label>
-    <input type="text" name="name" id="name" class="input"
-           placeholder="e.g. New tab"
-           value="{{ name }}" maxlength="64" required autofocus>
-  </div>
+<form method="POST" class="macro-form" action="{{ form_action }}" id="macro-form">
+  <div class="macro-grid">
 
-  <div class="field">
-    <label>Playback</label>
-    <div class="quick-add-row">
-      <label class="inline">
-        Repeat
-        <input type="number" name="repeat" class="input delay-input"
-               value="{{ repeat }}" min="1" max="999" step="1">
-        ×
-      </label>
-      <label class="inline">
-        Speed
-        <input type="number" name="speed" class="input delay-input"
-               value="{{ speed }}" min="0.1" max="10" step="0.1">
-        ×
-      </label>
-    </div>
-    <span class="hint">
-      Repeat: how many times the macro plays back-to-back. Speed: playback
-      multiplier (0.5 = half speed, 2 = twice as fast). Stop a running macro
-      with the stop-playback hotkey (see Settings).
-    </span>
-  </div>
+    <!------------------------------------------------ RIGHT: details -->
+    <aside class="macro-aside">
+      <section class="card">
+        <h3 class="card-title">Macro</h3>
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" class="input"
+                 placeholder="e.g. New tab"
+                 value="{{ name }}" maxlength="64" required autofocus>
+          <span class="hint">Shown in the overlay and on the app page.</span>
+        </div>
+      </section>
 
-  <div class="card events-editor">
-
-    <div class="field">
-      <label for="quick-add">Quick add</label>
-      <div class="quick-add-row">
-        <input type="text" id="quick-add" class="input"
-               placeholder="e.g. Ctrl+T, Type &quot;hello&quot;, Wait 500, Click 500 300, Move 100 200"
-               autocomplete="off">
-        <button type="button" class="btn primary" onclick="quickAdd()">Add</button>
-      </div>
-      <div class="quick-add-row" style="margin-top: 8px;">
-        <label class="inline">
-          Per-event delay:
-          <input type="number" id="delay-input" class="input delay-input"
-                 value="50" min="0" max="10000" step="10">
-          ms
-        </label>
-      </div>
-      <div id="quick-add-toast" class="toast" aria-live="polite"></div>
-    </div>
-
-    <details class="cmd-builder" open>
-      <summary>Command builder</summary>
-      <p class="cmd-builder-hint">
-        Fill in the inputs and click <strong>Add</strong> — the command is
-        parsed and appended to the events table. You can also type any
-        command directly in Quick Add above.
-      </p>
-
-      <div class="cmd-blocks">
-
-        <div class="cmd-block cmd-block-wide">
-          <h4>Key press <span class="cmd-syntax">Ctrl+T</span></h4>
-          <p class="cmd-block-hint">
-            Click keys to build a combination in the Quick Add box, then Add.
+      <details class="card collapse" id="playback-details">
+        <summary>
+          Playback options
+          <span class="collapse-value" id="playback-summary">×{{ repeat }} · {{ speed }}×</span>
+        </summary>
+        <div class="collapse-body">
+          <div class="field">
+            <label for="repeat">Repeat</label>
+            <div class="input-suffix">
+              <input type="number" name="repeat" id="repeat" class="input"
+                     value="{{ repeat }}" min="1" max="999" step="1">
+              <span class="input-suffix-label">times</span>
+            </div>
+            <span class="hint">How many times the macro plays back-to-back.</span>
+          </div>
+          <div class="field">
+            <label for="speed">Speed</label>
+            <div class="input-suffix">
+              <input type="number" name="speed" id="speed" class="input"
+                     value="{{ speed }}" min="0.1" max="10" step="0.1">
+              <span class="input-suffix-label">× speed</span>
+            </div>
+            <span class="hint">0.5 = half speed, 2 = twice as fast.</span>
+          </div>
+          <p class="hint" style="margin: 0;">
+            Stop a running macro with the stop-playback hotkey
+            (change it in <a href="{{ url_for('settings') }}">Settings</a>).
           </p>
-          {% set key_target = '#quick-add' %}
-          {% set key_open = true %}
-          {% include "_key_reference.html" %}
-          <button type="button" class="btn primary small" data-cmd-add="key">Add key press</button>
         </div>
+      </details>
+    </aside>
 
-        <div class="cmd-block">
-          <h4>Type text <span class="cmd-syntax">Type "hello"</span></h4>
-          <div class="cmd-fields">
-            <input type="text" id="cmd-type-text" class="input"
-                   placeholder="Text to type" autocomplete="off">
-            <button type="button" class="btn primary small" data-cmd-add="type">Add</button>
+    <!------------------------------------------------- LEFT: events -->
+    <div class="macro-main">
+
+      <!-- Quick add -->
+      <section class="card macro-quick">
+        <div class="card-head">
+          <h3 class="card-title">Quick add</h3>
+          <label class="inline-compact" title="Delay added before each new event">
+            Gap
+            <input type="number" id="delay-input" class="input delay-input"
+                   value="50" min="0" max="10000" step="10">
+            ms
+          </label>
+        </div>
+        <div class="quick-add-row">
+          <input type="text" id="quick-add" class="input"
+                 placeholder='e.g. Ctrl+T, Type "hello", Wait 500, Click 500 300, Move 100 200'
+                 autocomplete="off">
+          <button type="button" class="btn primary" onclick="quickAdd()">Add</button>
+        </div>
+        <div id="quick-add-toast" class="toast" aria-live="polite"></div>
+        <p class="hint" style="margin: 8px 0 0;">
+          Type a command and press <kbd>Enter</kbd>. Not sure of the syntax?
+          Open the <a href="#command-builder" onclick="return openBuilder();">command builder</a>.
+        </p>
+      </section>
+
+      <!-- Command builder (collapsed) -->
+      <details class="card collapse cmd-builder" id="command-builder">
+        <summary>
+          Command builder
+          <span class="collapse-value">click-to-fill</span>
+        </summary>
+        <div class="collapse-body">
+          <p class="cmd-builder-hint">
+            Pick a command type, fill in the fields, then <strong>Add</strong> —
+            it is parsed and appended to the events below. For key
+            combinations, click the keys and press <strong>Add key press</strong>.
+          </p>
+
+          <div class="cmd-tabs" role="tablist">
+            <button type="button" class="cmd-tab active" data-cmd-tab="key">Key press</button>
+            <button type="button" class="cmd-tab" data-cmd-tab="type">Type text</button>
+            <button type="button" class="cmd-tab" data-cmd-tab="wait">Wait</button>
+            <button type="button" class="cmd-tab" data-cmd-tab="click">Click</button>
+            <button type="button" class="cmd-tab" data-cmd-tab="move">Move</button>
+            <button type="button" class="cmd-tab" data-cmd-tab="scroll">Scroll</button>
+            <button type="button" class="cmd-tab" data-cmd-tab="hold">Hold / Release</button>
+          </div>
+
+          <!-- Key press -->
+          <div class="cmd-panel active" data-cmd-panel="key">
+            {% set key_target = '#quick-add' %}
+            {% set key_open = true %}
+            {% include "_key_reference.html" %}
+            <button type="button" class="btn primary small" data-cmd-add="key">Add key press</button>
+          </div>
+
+          <!-- Type text -->
+          <div class="cmd-panel" data-cmd-panel="type">
+            <label class="cmd-label" for="cmd-type-text">Text to type</label>
+            <div class="cmd-fields">
+              <input type="text" id="cmd-type-text" class="input"
+                     placeholder="Hello world" autocomplete="off">
+              <button type="button" class="btn primary small" data-cmd-add="type">Add</button>
+            </div>
+            <span class="hint">Types the literal text, using Shift only for capitals.</span>
+          </div>
+
+          <!-- Wait -->
+          <div class="cmd-panel" data-cmd-panel="wait">
+            <label class="cmd-label" for="cmd-wait-ms">Pause before the next event</label>
+            <div class="cmd-fields">
+              <input type="number" id="cmd-wait-ms" class="input cmd-count"
+                     min="0" max="600000" step="50" value="500"
+                     aria-label="Milliseconds">
+              <span class="cmd-unit">ms</span>
+              <button type="button" class="btn primary small" data-cmd-add="wait">Add</button>
+            </div>
+          </div>
+
+          <!-- Click -->
+          <div class="cmd-panel" data-cmd-panel="click">
+            <label class="cmd-label">Mouse click</label>
+            <div class="cmd-fields">
+              <select id="cmd-click-button" class="input" aria-label="Mouse button">
+                <option value="left">Left click</option>
+                <option value="right">Right click</option>
+                <option value="middle">Middle click</option>
+              </select>
+              <input type="number" id="cmd-click-x" class="input cmd-coord"
+                     placeholder="X" aria-label="X coordinate">
+              <input type="number" id="cmd-click-y" class="input cmd-coord"
+                     placeholder="Y" aria-label="Y coordinate">
+              <button type="button" class="btn primary small" data-cmd-add="click">Add</button>
+            </div>
+            <span class="hint">Leave X/Y empty to click at the current cursor position.</span>
+          </div>
+
+          <!-- Move -->
+          <div class="cmd-panel" data-cmd-panel="move">
+            <label class="cmd-label">Move the cursor</label>
+            <div class="cmd-fields">
+              <input type="number" id="cmd-move-x" class="input cmd-coord"
+                     placeholder="X" aria-label="X coordinate">
+              <input type="number" id="cmd-move-y" class="input cmd-coord"
+                     placeholder="Y" aria-label="Y coordinate">
+              <button type="button" class="btn primary small" data-cmd-add="move">Add</button>
+            </div>
+            <span class="hint">Coordinates are absolute screen pixels.</span>
+          </div>
+
+          <!-- Scroll -->
+          <div class="cmd-panel" data-cmd-panel="scroll">
+            <label class="cmd-label">Scroll the wheel</label>
+            <div class="cmd-fields">
+              <select id="cmd-scroll-dir" class="input" aria-label="Direction">
+                <option value="down">Down</option>
+                <option value="up">Up</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+              </select>
+              <input type="number" id="cmd-scroll-count" class="input cmd-count"
+                     min="1" max="100" step="1" value="1" aria-label="Count">
+              <button type="button" class="btn primary small" data-cmd-add="scroll">Add</button>
+            </div>
+            <span class="hint">Number of wheel notches to scroll.</span>
+          </div>
+
+          <!-- Hold / Release -->
+          <div class="cmd-panel" data-cmd-panel="hold">
+            <label class="cmd-label">Hold or release a key</label>
+            <div class="cmd-fields">
+              <select id="cmd-hold-action" class="input" aria-label="Action">
+                <option value="Hold">Hold</option>
+                <option value="Release">Release</option>
+              </select>
+              <input type="text" id="cmd-hold-key" class="input" list="cmd-key-names"
+                     placeholder="shift" autocomplete="off" aria-label="Key">
+              <datalist id="cmd-key-names">
+                <option value="shift"></option><option value="ctrl"></option>
+                <option value="alt"></option><option value="win"></option>
+                <option value="enter"></option><option value="esc"></option>
+                <option value="tab"></option><option value="space"></option>
+                <option value="backspace"></option><option value="delete"></option>
+                <option value="home"></option><option value="end"></option>
+                <option value="page up"></option><option value="page down"></option>
+                <option value="up"></option><option value="down"></option>
+                <option value="left"></option><option value="right"></option>
+                <option value="insert"></option><option value="pause"></option>
+                <option value="caps lock"></option><option value="num lock"></option>
+                <option value="scroll lock"></option><option value="print screen"></option>
+                <option value="menu"></option>
+                {% for n in range(1, 25) %}<option value="f{{ n }}"></option>{% endfor %}
+              </datalist>
+              <button type="button" class="btn primary small" data-cmd-add="hold">Add</button>
+            </div>
+            <span class="hint">Hold presses the key down and leaves it held; pair it with Release.</span>
           </div>
         </div>
+      </details>
 
-        <div class="cmd-block">
-          <h4>Wait <span class="cmd-syntax">Wait 500</span></h4>
-          <div class="cmd-fields">
-            <input type="number" id="cmd-wait-ms" class="input"
-                   min="0" max="600000" step="50" value="500"
-                   aria-label="Milliseconds">
-            <span class="cmd-unit">ms</span>
-            <button type="button" class="btn primary small" data-cmd-add="wait">Add</button>
-          </div>
+      <!-- Events -->
+      <section class="card macro-events">
+        <div class="card-head">
+          <h3 class="card-title">
+            Events <span class="count-badge" id="event-count">0</span>
+          </h3>
+          <button type="button" class="btn ghost small" id="clear-events"
+                  onclick="if (confirm('Remove all events from this macro?')) eventsEditor.reset();">
+            Clear all
+          </button>
         </div>
 
-        <div class="cmd-block">
-          <h4>Click <span class="cmd-syntax">Click 500 300</span></h4>
-          <div class="cmd-fields">
-            <select id="cmd-click-button" class="input" aria-label="Mouse button">
-              <option value="left">Left click</option>
-              <option value="right">Right click</option>
-              <option value="middle">Middle click</option>
-            </select>
-            <input type="number" id="cmd-click-x" class="input cmd-coord"
-                   placeholder="X" aria-label="X coordinate">
-            <input type="number" id="cmd-click-y" class="input cmd-coord"
-                   placeholder="Y" aria-label="Y coordinate">
-            <button type="button" class="btn primary small" data-cmd-add="click">Add</button>
-          </div>
-          <span class="hint">Leave X/Y empty to click at the current cursor position.</span>
+        <div class="events-table-wrap">
+          <table class="table events-table" id="events-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;">#</th>
+                <th style="width: 92px;">Time (ms)</th>
+                <th style="width: 132px;">Type</th>
+                <th>Payload</th>
+                <th style="width: 46px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="empty-row"><td colspan="5">
+                No events yet — add some with Quick add or the command builder.
+              </td></tr>
+            </tbody>
+          </table>
         </div>
 
-        <div class="cmd-block">
-          <h4>Move <span class="cmd-syntax">Move 500 300</span></h4>
-          <div class="cmd-fields">
-            <input type="number" id="cmd-move-x" class="input cmd-coord"
-                   placeholder="X" aria-label="X coordinate">
-            <input type="number" id="cmd-move-y" class="input cmd-coord"
-                   placeholder="Y" aria-label="Y coordinate">
-            <button type="button" class="btn primary small" data-cmd-add="move">Add</button>
+        <details class="raw-json-toggle">
+          <summary>Edit raw JSON</summary>
+          <textarea name="events" id="events-json" class="textarea"
+                    placeholder="[[0, [&quot;key_down&quot;, &quot;Key.ctrl_l&quot;]], …]">{{ events_json }}</textarea>
+          <div class="hint">
+            Kept in sync with the table above. JSON is validated server-side on save.
           </div>
-          <span class="hint">Coordinates are absolute screen pixels.</span>
-        </div>
-
-        <div class="cmd-block">
-          <h4>Scroll <span class="cmd-syntax">Scroll down</span></h4>
-          <div class="cmd-fields">
-            <select id="cmd-scroll-dir" class="input" aria-label="Direction">
-              <option value="down">Down</option>
-              <option value="up">Up</option>
-              <option value="left">Left</option>
-              <option value="right">Right</option>
-            </select>
-            <input type="number" id="cmd-scroll-count" class="input cmd-count"
-                   min="1" max="100" step="1" value="1" aria-label="Count">
-            <button type="button" class="btn primary small" data-cmd-add="scroll">Add</button>
-          </div>
-        </div>
-
-        <div class="cmd-block">
-          <h4>Hold / Release <span class="cmd-syntax">Hold Shift</span></h4>
-          <div class="cmd-fields">
-            <select id="cmd-hold-action" class="input" aria-label="Action">
-              <option value="Hold">Hold</option>
-              <option value="Release">Release</option>
-            </select>
-            <input type="text" id="cmd-hold-key" class="input" list="cmd-key-names"
-                   placeholder="shift" autocomplete="off" aria-label="Key">
-            <datalist id="cmd-key-names">
-              <option value="shift"></option><option value="ctrl"></option>
-              <option value="alt"></option><option value="win"></option>
-              <option value="enter"></option><option value="esc"></option>
-              <option value="tab"></option><option value="space"></option>
-              <option value="backspace"></option><option value="delete"></option>
-              <option value="home"></option><option value="end"></option>
-              <option value="page up"></option><option value="page down"></option>
-              <option value="up"></option><option value="down"></option>
-              <option value="left"></option><option value="right"></option>
-              <option value="insert"></option><option value="pause"></option>
-              <option value="caps lock"></option><option value="num lock"></option>
-              <option value="scroll lock"></option><option value="print screen"></option>
-              <option value="menu"></option>
-              {% for n in range(1, 25) %}<option value="f{{ n }}"></option>{% endfor %}
-            </datalist>
-            <button type="button" class="btn primary small" data-cmd-add="hold">Add</button>
-          </div>
-          <span class="hint">Hold presses the key down and leaves it held; pair it with Release.</span>
-        </div>
-
-      </div>
-    </details>
-
-    <div class="events-table-wrap">
-      <table class="table events-table" id="events-table">
-        <thead>
-          <tr>
-            <th style="width: 40px;">#</th>
-            <th style="width: 90px;">Time (ms)</th>
-            <th style="width: 130px;">Type</th>
-            <th>Payload</th>
-            <th style="width: 50px;"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="empty-row"><td colspan="5">
-            No events yet. Use Quick Add above or paste JSON below.
-          </td></tr>
-        </tbody>
-      </table>
+        </details>
+      </section>
     </div>
-
-    <details class="raw-json-toggle">
-      <summary>Edit raw JSON</summary>
-      <textarea name="events" id="events-json" class="textarea"
-                placeholder="[[0, [&quot;key_down&quot;, &quot;Key.ctrl_l&quot;]], …]">{{ events_json }}</textarea>
-      <div class="hint">
-        Edits here are kept in sync with the table above. Validating the JSON
-        is done server-side on Save.
-      </div>
-    </details>
-
   </div>
 
   <div class="form-actions">
@@ -225,15 +277,22 @@
   </div>
 </form>
 
-<script src="{{ url_for('static', filename='event_editor.js') }}?v=6"
+<script src="{{ url_for('static', filename='event_editor.js') }}?v=7"
         data-parse-url="{{ url_for('parse_command') }}"></script>
 <script src="{{ url_for('static', filename='key_reference.js') }}?v=1"></script>
 <script>
-  document.getElementById('quick-add').addEventListener('keydown', function(e) {
+  document.getElementById('quick-add').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       e.preventDefault();
       quickAdd();
     }
   });
+
+  // Open the command builder when the "command builder" link is clicked.
+  function openBuilder() {
+    var el = document.getElementById('command-builder');
+    if (el) { el.open = true; el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
+    return false;
+  }
 </script>
 {% endblock %}

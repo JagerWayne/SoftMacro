@@ -361,18 +361,23 @@
   </p>
 
   <h3>The macro form</h3>
+  <p>
+    The form is split in two: the macro's details (name and playback) sit in the
+    right column, while the events workspace — Quick Add, the command builder
+    and the events table — fills the left. Advanced parts stay collapsed until
+    you need them.
+  </p>
   <div class="help-table-wrap">
     <table class="table">
       <thead><tr><th>Field</th><th>What it does</th></tr></thead>
       <tbody>
         <tr><td>Name</td><td>Shown in the overlay and on the app page.</td></tr>
-        <tr><td>Repeat</td><td>How many times the macro plays back-to-back (1–999).</td></tr>
-        <tr><td>Speed</td><td>Playback multiplier: <code>0.5</code> = half speed, <code>2</code> = twice as fast.</td></tr>
+        <tr><td>Playback options <span class="help-note-inline">(collapsed)</span></td><td>Repeat (1–999) and speed (<code>0.5</code> = half speed, <code>2</code> = twice as fast). The collapsed heading shows the current values.</td></tr>
         <tr><td>Quick Add</td><td>Type a command, press Enter (or <em>Add</em>), and its events are appended.</td></tr>
-        <tr><td>Per-event delay</td><td>Milliseconds added between events created by Quick Add (default 50).</td></tr>
-        <tr><td>Command builder</td><td>Clickable keys and input boxes that build commands for you.</td></tr>
-        <tr><td>Events table</td><td>Every event with its timestamp, type and payload — editable and deletable.</td></tr>
-        <tr><td>Raw JSON</td><td>The exact stored format, kept in sync with the table.</td></tr>
+        <tr><td>Gap</td><td>Milliseconds inserted between events added by Quick Add (default 50).</td></tr>
+        <tr><td>Command builder <span class="help-note-inline">(collapsed)</span></td><td>A tabbed panel — Key press, Type, Wait, Click, Move, Scroll, Hold/Release — that builds each command for you.</td></tr>
+        <tr><td>Events table</td><td>Every event with its timestamp, type and payload — editable and deletable. The heading shows the count; <em>Clear all</em> removes everything.</td></tr>
+        <tr><td>Raw JSON <span class="help-note-inline">(collapsed)</span></td><td>The exact stored format, kept in sync with the table.</td></tr>
       </tbody>
     </table>
   </div>

@@ -34,6 +34,7 @@
   const $delay      = document.getElementById('delay-input');
   const $toast      = document.getElementById('quick-add-toast');
   const $quickAdd   = document.getElementById('quick-add');
+  const $count      = document.getElementById('event-count');
   const $form       = document.getElementById('macro-form');
   const scriptTag   = document.currentScript || document.querySelector('script[data-parse-url]');
   const ds          = scriptTag ? scriptTag.dataset : {};
@@ -222,6 +223,33 @@
     btn.addEventListener('click', () => addCommand(btn.dataset.cmdAdd));
   });
 
+  // Command-builder tabs: show only the selected command's input panel.
+  const $cmdTabs   = document.querySelectorAll('.cmd-tab');
+  const $cmdPanels = document.querySelectorAll('.cmd-panel');
+  $cmdTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const name = tab.dataset.cmdTab;
+      $cmdTabs.forEach((t) => t.classList.toggle('active', t === tab));
+      $cmdPanels.forEach((p) =>
+        p.classList.toggle('active', p.dataset.cmdPanel === name));
+    });
+  });
+
+  // Live "×N · N×" summary on the collapsed Playback options card.
+  const $repeat       = document.getElementById('repeat');
+  const $speed        = document.getElementById('speed');
+  const $playSummary  = document.getElementById('playback-summary');
+  function updatePlaybackSummary() {
+    if (!$playSummary) return;
+    const r = $repeat && $repeat.value ? $repeat.value : '1';
+    const s = $speed && $speed.value ? $speed.value : '1';
+    $playSummary.textContent = '×' + r + ' · ' + s + '×';
+  }
+  [$repeat, $speed].forEach((el) => {
+    if (el) el.addEventListener('input', updatePlaybackSummary);
+  });
+  updatePlaybackSummary();
+
   function setToast(msg, kind) {
     if (!$toast) return;
     $toast.textContent = msg;
@@ -237,12 +265,17 @@
 
   function render() {
     if (!events.length) {
-      $tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No events yet. Use Quick Add above or paste JSON below.</td></tr>';
+      $tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No events yet — add some with Quick add or the command builder.</td></tr>';
     } else {
       const rows = events.map((ev, i) => rowHtml(ev, i)).join('');
       $tbody.innerHTML = rows;
     }
     syncHidden();
+    updateCount();
+  }
+
+  function updateCount() {
+    if ($count) $count.textContent = String(events.length);
   }
 
   function rowHtml(ev, i) {
